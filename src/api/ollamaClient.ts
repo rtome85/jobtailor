@@ -26,7 +26,7 @@ export class OllamaClient {
     }
   }
 
-  private formatUserProfile(profile: UserProfile): string {
+  protected formatUserProfile(profile: UserProfile): string {
     if (!profile) return ""
 
     const skills =
@@ -183,5 +183,56 @@ export class OllamaClient {
       this.generateCoverLetter(request)
     ])
     return { resume, coverLetter }
+  }
+
+  async analyzeMatch(
+    request: GenerateRequest
+  ): Promise<{ percentage: number; summary: string }> {
+    try {
+      const userPrompt = `Analyze the fit between this candidate and the job posting.
+Return ONLY a valid JSON object in this exact format: {"percentage": <0-100>, "summary": "<2 concise sentences>"}
+
+Job Title: ${request.jobTitle} at ${request.companyName}
+Job Description: ${request.jobDescription.substring(0, 2000)}
+Candidate Profile: ${this.formatUserProfile(request.userProfile)}`
+
+      const response = await fetch(`${this.config.baseUrl}/chat`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.config.apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: request.model,
+          messages: [
+            {
+              role: "system",
+              content: "You are a career advisor. Return only valid JSON, no markdown."
+            },
+            { role: "user", content: userPrompt }
+          ],
+          stream: false
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Ollama API error: ${response.status}`)
+      }
+
+      const data = await response.json()
+      const content = data.message?.content || "{}"
+      const cleaned = content
+        .replace(/```json?\n?/g, "")
+        .replace(/```/g, "")
+        .trim()
+      const parsed = JSON.parse(cleaned)
+
+      return {
+        percentage: Math.min(100, Math.max(0, Number(parsed.percentage) || 0)),
+        summary: String(parsed.summary || "")
+      }
+    } catch {
+      return { percentage: 0, summary: "Match analysis unavailable." }
+    }
   }
 }

@@ -5,7 +5,6 @@ import { STORAGE_KEYS } from "~storage/keys"
 import { DEFAULT_PROMPTS } from "~types/config"
 import { type UserProfile } from "~types/userProfile"
 import {
-  downloadMarkdownFile,
   formatMarkdownContent,
   generateFilename
 } from "~utils/documentFormatter"
@@ -47,14 +46,22 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
     const client = new OllamaClient(ollamaConfig)
     const generatedAt = new Date()
 
-    const { resume, coverLetter } = await client.generateResumeAndCoverLetter({
+    const generateRequest = {
       jobDescription: jobData.selectedText,
       companyName,
       jobTitle,
       model: selectedModel,
       prompts: customPrompts,
       userProfile: userProfile as UserProfile
-    })
+    }
+
+    const [{ resume, coverLetter }, match] = await Promise.all([
+      client.generateResumeAndCoverLetter(generateRequest),
+      client.analyzeMatch(generateRequest)
+    ])
+
+    const resumeFilename = generateFilename("resume", companyName, jobTitle, generatedAt)
+    const coverLetterFilename = generateFilename("cover-letter", companyName, jobTitle, generatedAt)
 
     const resumeContent = formatMarkdownContent(
       resume,
@@ -73,20 +80,18 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
       generatedAt
     )
 
-    await downloadMarkdownFile(
-      generateFilename("resume", companyName, jobTitle, generatedAt),
-      resumeContent
-    )
-    await downloadMarkdownFile(
-      generateFilename("cover-letter", companyName, jobTitle, generatedAt),
-      coverLetterContent
-    )
-
     chrome.storage.local.remove([STORAGE_KEYS.PENDING_JOB_DATA])
 
     res.send({
       success: true,
-      message: "Resume and cover letter generated and downloaded successfully!"
+      message: "Documents generated!",
+      data: {
+        resumeContent,
+        resumeFilename,
+        coverLetterContent,
+        coverLetterFilename,
+        match
+      }
     })
   } catch (error) {
     res.send({
