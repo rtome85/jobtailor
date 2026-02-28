@@ -184,7 +184,7 @@ export class OllamaClient {
     }
 
     const data = await response.json()
-    console.log(data)
+
     return data.message?.content || "No content generated"
   }
 
@@ -249,7 +249,6 @@ export class OllamaClient {
     weaknesses: string[]
     improvements: string[]
   }> {
-    console.log("[analyzeMatch] called")
     try {
       const userPrompt = `You are a career advisor. Analyze how well this candidate fits the job posting below.
 
@@ -306,13 +305,11 @@ ${this.formatUserProfile(request.userProfile, true)}`
 
       const data = await response.json()
       const content = data.message?.content || "{}"
-      console.log("[analyzeMatch] raw response:", content)
 
       // Extract the outermost JSON object regardless of surrounding text/markdown
       const jsonMatch = content.match(/\{[\s\S]*\}/)
       if (!jsonMatch) throw new Error("No JSON object found in response")
       const parsed = JSON.parse(jsonMatch[0])
-      console.log("[analyzeMatch] parsed:", parsed)
 
       return {
         percentage: Math.min(100, Math.max(0, Number(parsed.percentage) || 0)),
@@ -328,7 +325,6 @@ ${this.formatUserProfile(request.userProfile, true)}`
           : []
       }
     } catch (err) {
-      console.error("[analyzeMatch] failed:", err)
       return {
         percentage: 0,
         summary: "Match analysis unavailable.",
