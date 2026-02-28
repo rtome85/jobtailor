@@ -35,17 +35,17 @@ function Options() {
     DEFAULT_PROMPTS
   )
 
-  const [storedPromptsVersion, setStoredPromptsVersion] = useStorage<string>(
+  const [storedPromptsVersion, setStoredPromptsVersion, { isLoading: isVersionLoading }] = useStorage<string>(
     "promptsVersion",
     ""
   )
 
   useEffect(() => {
-    if (storedPromptsVersion !== PROMPTS_VERSION) {
+    if (!isVersionLoading && storedPromptsVersion !== PROMPTS_VERSION) {
       setCustomPrompts(DEFAULT_PROMPTS)
       setStoredPromptsVersion(PROMPTS_VERSION)
     }
-  }, [storedPromptsVersion])
+  }, [storedPromptsVersion, isVersionLoading])
 
   const [testStatus, setTestStatus] = useState<{
     type: "idle" | "loading" | "success" | "error"

@@ -82,6 +82,7 @@ function IndexDialog() {
   // Track where the save form was opened from so Cancel goes back correctly
   const [saveFormOrigin, setSaveFormOrigin] = useState<"success" | "applicationsList">("success")
   const [saveDocs, setSaveDocs] = useState(true)
+  const [saveFormError, setSaveFormError] = useState("")
 
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const quoteIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -181,6 +182,11 @@ function IndexDialog() {
   const openSaveForm = (origin: "success" | "applicationsList", app: SavedApplication | null = null) => {
     setEditingApplication(app)
     setSaveFormOrigin(origin)
+
+    if (!app && origin === "success") {
+      setSaveDocs(true)
+    }
+
     if (app) {
       setSaveFormData({
         company: app.company,
@@ -200,30 +206,36 @@ function IndexDialog() {
   }
 
   const handleSaveApplication = () => {
+    if (!saveFormData.company.trim() || !saveFormData.jobTitle.trim() || !saveFormData.date) {
+      setSaveFormError("Company, job title, and date are required.")
+      return
+    }
+    setSaveFormError("")
+
     const docs = !editingApplication && result && saveDocs
       ? {
-          resumeContent: result.resumeContent,
-          resumeFilename: result.resumeFilename,
-          coverLetterContent: result.coverLetterContent,
-          coverLetterFilename: result.coverLetterFilename,
-        }
+        resumeContent: result.resumeContent,
+        resumeFilename: result.resumeFilename,
+        coverLetterContent: result.coverLetterContent,
+        coverLetterFilename: result.coverLetterFilename,
+      }
       : {}
 
     const updated: SavedApplication[] = editingApplication
       ? savedApplications.map((a) =>
-          a.id === editingApplication.id
-            ? { ...a, ...saveFormData }   // preserve existing docs
-            : a
-        )
+        a.id === editingApplication.id
+          ? { ...a, ...saveFormData }   // preserve existing docs
+          : a
+      )
       : [
-          ...savedApplications,
-          {
-            ...saveFormData,
-            ...docs,
-            id: crypto.randomUUID(),
-            createdAt: new Date().toISOString(),
-          },
-        ]
+        ...savedApplications,
+        {
+          ...saveFormData,
+          ...docs,
+          id: crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+        },
+      ]
     chrome.storage.local.set({ savedApplications: updated })
     setSavedApplications(updated)
     setView("applicationsList")
@@ -287,9 +299,8 @@ function IndexDialog() {
           <div className="bg-gray-50 rounded-xl p-5 mb-5">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-semibold text-gray-700">Match Score</span>
-              <span className={`text-2xl font-bold ${
-                pct >= 70 ? "text-green-600" : pct >= 50 ? "text-yellow-600" : "text-red-600"
-              }`}>
+              <span className={`text-2xl font-bold ${pct >= 70 ? "text-green-600" : pct >= 50 ? "text-yellow-600" : "text-red-600"
+                }`}>
                 {pct}%
               </span>
             </div>
@@ -449,6 +460,10 @@ function IndexDialog() {
             </label>
           )}
 
+          {saveFormError && (
+            <p className="mt-4 text-sm text-red-600">{saveFormError}</p>
+          )}
+
           <div className="flex gap-3 mt-6">
             <button
               onClick={handleSaveApplication}
@@ -515,9 +530,9 @@ function IndexDialog() {
               {(viewingApplication.resumeContent || viewingApplication.coverLetterContent) && (
                 <div className="mt-5 pt-4 border-t border-gray-100 space-y-2">
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Documents</p>
-                  {viewingApplication.resumeContent && (
+                  {viewingApplication.resumeContent && viewingApplication.resumeFilename && (
                     <button
-                      onClick={() => downloadMarkdownFile(viewingApplication.resumeFilename!, viewingApplication.resumeContent!)}
+                      onClick={() => downloadMarkdownFile(viewingApplication.resumeFilename, viewingApplication.resumeContent)}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5
                                  bg-gradient-to-r from-purple-500 to-purple-600
                                  text-white text-sm rounded-lg hover:opacity-90 transition-opacity font-medium">
@@ -525,9 +540,9 @@ function IndexDialog() {
                       <span>Download CV</span>
                     </button>
                   )}
-                  {viewingApplication.coverLetterContent && (
+                  {viewingApplication.coverLetterContent && viewingApplication.coverLetterFilename && (
                     <button
-                      onClick={() => downloadMarkdownFile(viewingApplication.coverLetterFilename!, viewingApplication.coverLetterContent!)}
+                      onClick={() => downloadMarkdownFile(viewingApplication.coverLetterFilename, viewingApplication.coverLetterContent)}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5
                                  bg-gradient-to-r from-indigo-500 to-indigo-600
                                  text-white text-sm rounded-lg hover:opacity-90 transition-opacity font-medium">
@@ -610,18 +625,18 @@ function IndexDialog() {
                             className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
                             ✏️
                           </button>
-                          {app.resumeContent && (
+                          {app.resumeContent && app.resumeFilename && (
                             <button
                               title="Download CV"
-                              onClick={() => downloadMarkdownFile(app.resumeFilename!, app.resumeContent!)}
+                              onClick={() => downloadMarkdownFile(app.resumeFilename, app.resumeContent)}
                               className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
                               📄
                             </button>
                           )}
-                          {app.coverLetterContent && (
+                          {app.coverLetterContent && app.coverLetterFilename && (
                             <button
                               title="Download Cover Letter"
-                              onClick={() => downloadMarkdownFile(app.coverLetterFilename!, app.coverLetterContent!)}
+                              onClick={() => downloadMarkdownFile(app.coverLetterFilename, app.coverLetterContent)}
                               className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
                               ✉️
                             </button>
@@ -739,13 +754,12 @@ function IndexDialog() {
 
         {status && (
           <p
-            className={`mt-3 text-sm ${
-              status.includes("failed") ||
+            className={`mt-3 text-sm ${status.includes("failed") ||
               status.includes("error") ||
               status.includes("Error")
-                ? "text-red-600"
-                : "text-purple-600"
-            }`}>
+              ? "text-red-600"
+              : "text-purple-600"
+              }`}>
             {status}
           </p>
         )}
