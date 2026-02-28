@@ -43,12 +43,47 @@ export interface Education {
   description?: string
 }
 
+export interface Language {
+  id: string // crypto.randomUUID()
+  name: string
+  level: string // e.g. "Native", "Proficient (C1)", "Professional (B1)"
+}
+
 export interface UserProfile {
   personalInfo: PersonalInfo
   education: Education[]
   skills: Skill[]
   workExperience: WorkExperience[]
   personalProjects: PersonalProject[]
+  languages: Language[]
+}
+
+export type ApplicationStatus =
+  | "Applied"
+  | "HR Interview"
+  | "1st Technical Interview"
+  | "2nd Technical Interview"
+  | "Final Interview"
+  | "Offer"
+  | "Reject"
+
+export const APPLICATION_STATUSES: ApplicationStatus[] = [
+  "Applied",
+  "HR Interview",
+  "1st Technical Interview",
+  "2nd Technical Interview",
+  "Final Interview",
+  "Offer",
+  "Reject",
+]
+
+export interface SavedApplication {
+  id: string
+  company: string
+  jobTitle: string
+  status: ApplicationStatus
+  date: string       // "YYYY-MM-DD"
+  createdAt: string  // ISO timestamp, set once on save
 }
 
 export const DEFAULT_USER_PROFILE: UserProfile = {
@@ -65,5 +100,6 @@ export const DEFAULT_USER_PROFILE: UserProfile = {
   education: [],
   skills: [],
   workExperience: [],
-  personalProjects: []
+  personalProjects: [],
+  languages: []
 }
