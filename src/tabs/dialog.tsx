@@ -53,7 +53,8 @@ function statusBadgeClass(status: ApplicationStatus): string {
 }
 
 function IndexDialog() {
-  const [view, setView] = useState<View>("form")
+  const initialView = new URLSearchParams(window.location.search).get("view") as View | null
+  const [view, setView] = useState<View>(initialView ?? "form")
   const [companyName, setCompanyName] = useState("")
   const [jobTitle, setJobTitle] = useState("")
   const [selectedModel, setSelectedModel] = useState("gpt-oss:20b-cloud")
