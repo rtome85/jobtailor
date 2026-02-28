@@ -80,6 +80,7 @@ function IndexDialog() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   // Track where the save form was opened from so Cancel goes back correctly
   const [saveFormOrigin, setSaveFormOrigin] = useState<"success" | "applicationsList">("success")
+  const [saveDocs, setSaveDocs] = useState(true)
 
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const quoteIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -198,16 +199,26 @@ function IndexDialog() {
   }
 
   const handleSaveApplication = () => {
+    const docs = !editingApplication && result && saveDocs
+      ? {
+          resumeContent: result.resumeContent,
+          resumeFilename: result.resumeFilename,
+          coverLetterContent: result.coverLetterContent,
+          coverLetterFilename: result.coverLetterFilename,
+        }
+      : {}
+
     const updated: SavedApplication[] = editingApplication
       ? savedApplications.map((a) =>
           a.id === editingApplication.id
-            ? { ...editingApplication, ...saveFormData }
+            ? { ...a, ...saveFormData }   // preserve existing docs
             : a
         )
       : [
           ...savedApplications,
           {
             ...saveFormData,
+            ...docs,
             id: crypto.randomUUID(),
             createdAt: new Date().toISOString(),
           },
@@ -425,6 +436,18 @@ function IndexDialog() {
             </div>
           </div>
 
+          {saveFormOrigin === "success" && result && (
+            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer mt-4">
+              <input
+                type="checkbox"
+                checked={saveDocs}
+                onChange={(e) => setSaveDocs(e.target.checked)}
+                className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+              />
+              Save resume and cover letter
+            </label>
+          )}
+
           <div className="flex gap-3 mt-6">
             <button
               onClick={handleSaveApplication}
@@ -488,6 +511,31 @@ function IndexDialog() {
                   </dd>
                 </div>
               </dl>
+              {(viewingApplication.resumeContent || viewingApplication.coverLetterContent) && (
+                <div className="mt-5 pt-4 border-t border-gray-100 space-y-2">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Documents</p>
+                  {viewingApplication.resumeContent && (
+                    <button
+                      onClick={() => downloadMarkdownFile(viewingApplication.resumeFilename!, viewingApplication.resumeContent!)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5
+                                 bg-gradient-to-r from-purple-500 to-purple-600
+                                 text-white text-sm rounded-lg hover:opacity-90 transition-opacity font-medium">
+                      <span>↓</span>
+                      <span>Download CV</span>
+                    </button>
+                  )}
+                  {viewingApplication.coverLetterContent && (
+                    <button
+                      onClick={() => downloadMarkdownFile(viewingApplication.coverLetterFilename!, viewingApplication.coverLetterContent!)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5
+                                 bg-gradient-to-r from-indigo-500 to-indigo-600
+                                 text-white text-sm rounded-lg hover:opacity-90 transition-opacity font-medium">
+                      <span>↓</span>
+                      <span>Download Cover Letter</span>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -561,6 +609,22 @@ function IndexDialog() {
                             className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
                             ✏️
                           </button>
+                          {app.resumeContent && (
+                            <button
+                              title="Download CV"
+                              onClick={() => downloadMarkdownFile(app.resumeFilename!, app.resumeContent!)}
+                              className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
+                              📄
+                            </button>
+                          )}
+                          {app.coverLetterContent && (
+                            <button
+                              title="Download Cover Letter"
+                              onClick={() => downloadMarkdownFile(app.coverLetterFilename!, app.coverLetterContent!)}
+                              className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
+                              ✉️
+                            </button>
+                          )}
                           {deleteConfirmId === app.id ? (
                             <button
                               onClick={() => handleDeleteApplication(app.id)}

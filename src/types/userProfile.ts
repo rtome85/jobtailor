@@ -84,6 +84,12 @@ export interface SavedApplication {
   status: ApplicationStatus
   date: string       // "YYYY-MM-DD"
   createdAt: string  // ISO timestamp, set once on save
+
+  // Optional — present only when saved from the success screen
+  resumeContent?: string
+  resumeFilename?: string
+  coverLetterContent?: string
+  coverLetterFilename?: string
 }
 
 export const DEFAULT_USER_PROFILE: UserProfile = {
