@@ -14,6 +14,13 @@ chrome.runtime.onStartup.addListener(async () => {
 
 // Auto-sync: push to Google Drive after any change to syncable keys
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
+let pushChain = Promise.resolve()
+
+function enqueuePush(fn: () => Promise<void>): Promise<void> {
+  const next = pushChain.then(() => fn())
+  pushChain = next.catch(() => {}) // keep chain alive even if fn throws
+  return next
+}
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return
@@ -25,7 +32,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     const { syncConfig } = await chrome.storage.local.get("syncConfig")
     if (!syncConfig?.token) return
     try {
-      await push(syncConfig.token)
+      await enqueuePush(() => push(syncConfig.token))
       const { syncConfig: current } = await chrome.storage.local.get("syncConfig")
       if (current?.token === syncConfig.token) {
         await chrome.storage.local.set({
