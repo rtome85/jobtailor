@@ -34,9 +34,18 @@
       "contextMenus",
       "notifications",
       "storage",
-      "downloads"
+      "downloads",
+      "identity"
     ],
+    "oauth2": {
+      "client_id": "67775878924-1qlfv8huro0qkitm7ejiljit1i06fq7j.apps.googleusercontent.com",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive.appdata"
+      ]
+    },
     "host_permissions": [
+      "https://www.googleapis.com/*",
+      "https://oauth2.googleapis.com/*",
       "*://*.linkedin.com/*",
       "*://ollama.com/*",
       "*://www.ollama.com/*"

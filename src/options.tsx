@@ -14,6 +14,7 @@ import { SkillEditor } from "~components/SkillEditor"
 import { Tabs } from "~components/Tabs"
 import { AVAILABLE_MODELS, DEFAULT_LLM_TUNING, DEFAULT_PROMPTS, PROMPT_TEMPLATES, PROMPTS_VERSION, type CustomPrompts, type LLMTuningConfig, type PromptTemplate } from "~types/config"
 import { DEFAULT_USER_PROFILE, type UserProfile } from "~types/userProfile"
+import { authorize, pull, revoke, type SyncConfig } from "~utils/googleDriveSync"
 
 import "./style.css"
 
@@ -59,6 +60,12 @@ function Options() {
   }>({ type: "idle", message: "" })
 
   const [saveStatus, setSaveStatus] = useState("")
+
+  const [syncConfig, setSyncConfig] = useStorage<SyncConfig | null>("syncConfig", null)
+  const [syncStatus, setSyncStatus] = useState<{
+    type: "idle" | "loading" | "success" | "error"
+    message: string
+  }>({ type: "idle", message: "" })
 
   const [dialogState, setDialogState] = useState<{
     isOpen: boolean
@@ -145,12 +152,15 @@ function Options() {
 
   const handleExportData = async () => {
     try {
+      const { savedApplications } = await chrome.storage.local.get("savedApplications")
       const data = {
         version: "1.0.0",
         exportDate: new Date().toISOString(),
         ollamaConfig,
         customPrompts,
-        userProfile
+        userProfile,
+        llmTuning,
+        savedApplications: savedApplications ?? []
       }
 
       const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -198,6 +208,10 @@ function Options() {
           if (data.ollamaConfig) setOllamaConfig(data.ollamaConfig)
           if (data.customPrompts) setCustomPrompts(data.customPrompts)
           if (data.userProfile) setUserProfile(data.userProfile)
+          if (data.llmTuning) setLlmTuning(data.llmTuning)
+          if (data.savedApplications) {
+            await chrome.storage.local.set({ savedApplications: data.savedApplications })
+          }
 
           setSaveStatus("Data imported successfully!")
           setTimeout(() => setSaveStatus(""), 3000)
@@ -208,6 +222,43 @@ function Options() {
     }
 
     input.click()
+  }
+
+  const handleConnectDrive = async () => {
+    setSyncStatus({ type: "loading", message: "Connecting to Google Drive..." })
+    try {
+      const token = await authorize()
+      await setSyncConfig({ token, lastSynced: null })
+      setSyncStatus({ type: "success", message: "Connected! Your data will sync automatically." })
+    } catch (err) {
+      setSyncStatus({ type: "error", message: (err as Error).message })
+    }
+    setTimeout(() => setSyncStatus({ type: "idle", message: "" }), 5000)
+  }
+
+  const handleForcePull = async () => {
+    if (!syncConfig?.token) return
+    setSyncStatus({ type: "loading", message: "Restoring from Google Drive..." })
+    try {
+      await pull(syncConfig.token)
+      await setSyncConfig({ ...syncConfig, lastSynced: new Date().toISOString() })
+      setSyncStatus({ type: "success", message: "Data restored from Google Drive!" })
+    } catch (err) {
+      setSyncStatus({ type: "error", message: (err as Error).message })
+    }
+    setTimeout(() => setSyncStatus({ type: "idle", message: "" }), 5000)
+  }
+
+  const handleDisconnectDrive = async () => {
+    if (!syncConfig?.token) return
+    if (!confirm("Disconnect Google Drive? Your local data will be kept, but automatic sync will stop.")) return
+    setSyncStatus({ type: "loading", message: "Disconnecting..." })
+    try {
+      await revoke(syncConfig.token)
+    } finally {
+      await setSyncConfig(null)
+      setSyncStatus({ type: "idle", message: "" })
+    }
   }
 
   const tabs = [
@@ -747,6 +798,124 @@ function Options() {
           />
         </div>
       )
+    },
+    {
+      label: "Backup & Sync",
+      value: "backup-sync",
+      content: (
+        <div className="space-y-6">
+          {/* Google Drive Sync */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">Google Drive Sync</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Sync your profile, settings, and saved applications across computers. Data is stored
+                privately in your Google Drive app folder — only JobTailor can access it.
+              </p>
+            </div>
+
+            {!syncConfig?.token ? (
+              <div className="flex flex-col gap-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                  <p className="font-medium mb-1">How it works</p>
+                  <ul className="list-disc list-inside space-y-1 text-blue-700">
+                    <li>Connect once per device with your Google account</li>
+                    <li>Changes sync automatically after 2 seconds</li>
+                    <li>On a new device, connect and use Force Pull to restore</li>
+                    <li>Your data is stored in a private app folder, not visible in Drive</li>
+                  </ul>
+                </div>
+                <div>
+                  <button
+                    onClick={handleConnectDrive}
+                    disabled={syncStatus.type === "loading"}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700
+                             transition-colors font-medium disabled:opacity-50 flex items-center gap-2">
+                    {syncStatus.type === "loading" ? "Connecting..." : "Connect Google Drive"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    <span className="text-sm font-medium text-green-800">Connected</span>
+                  </div>
+                  {syncConfig.lastSynced && (
+                    <p className="text-xs text-green-700">
+                      Last synced: {new Date(syncConfig.lastSynced).toLocaleString()}
+                    </p>
+                  )}
+                  {!syncConfig.lastSynced && (
+                    <p className="text-xs text-green-700">
+                      Sync will happen automatically when you make changes.
+                    </p>
+                  )}
+                  {syncConfig.error && (
+                    <p className="text-xs text-red-600 mt-1">
+                      Last sync error: {syncConfig.error}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-3 flex-wrap">
+                  <button
+                    onClick={handleForcePull}
+                    disabled={syncStatus.type === "loading"}
+                    className="px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700
+                             transition-colors font-medium text-sm disabled:opacity-50">
+                    {syncStatus.type === "loading" ? "Restoring..." : "Force Pull from Drive"}
+                  </button>
+                  <button
+                    onClick={handleDisconnectDrive}
+                    disabled={syncStatus.type === "loading"}
+                    className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200
+                             transition-colors font-medium text-sm disabled:opacity-50">
+                    Disconnect
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {syncStatus.type === "success" && (
+              <div className="mt-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg text-sm">
+                {syncStatus.message}
+              </div>
+            )}
+            {syncStatus.type === "error" && (
+              <div className="mt-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
+                {syncStatus.message}
+              </div>
+            )}
+          </div>
+
+          {/* Manual Export/Import */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">Manual Export / Import</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Download a full backup or restore from a previously exported file. Includes profile,
+                settings, and all saved applications with generated CVs and cover letters.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleExportData}
+                className="px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700
+                         transition-colors font-medium text-sm">
+                Export Data
+              </button>
+              <button
+                onClick={handleImportData}
+                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700
+                         transition-colors font-medium text-sm">
+                Import Data
+              </button>
+            </div>
+          </div>
+        </div>
+      )
     }
   ]
 
@@ -771,18 +940,6 @@ function Options() {
               className="px-6 py-3 bg-purple-600 text-white rounded-lg
                        hover:bg-purple-700 transition-colors font-medium">
               Save Settings
-            </button>
-            <button
-              onClick={handleExportData}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg
-                       hover:bg-green-700 transition-colors font-medium">
-              Export Data
-            </button>
-            <button
-              onClick={handleImportData}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg
-                       hover:bg-blue-700 transition-colors font-medium">
-              Import Data
             </button>
           </div>
 

@@ -8,6 +8,18 @@ export const STORAGE_KEYS = {
   PENDING_JOB_DATA: "pendingJobData",
   SAVED_APPLICATIONS: "savedApplications",
   LLM_TUNING: "llmTuning",
+  SYNC_CONFIG: "syncConfig",
 } as const
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS]
+
+// Keys included in Google Drive sync (excludes temporary/auth data)
+export const SYNC_KEYS = [
+  "userProfile",
+  "ollamaConfig",
+  "customPrompts",
+  "llmTuning",
+  "savedApplications",
+] as const
+
+export type SyncKey = typeof SYNC_KEYS[number]
