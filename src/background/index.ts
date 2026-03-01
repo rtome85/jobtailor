@@ -1,3 +1,6 @@
+import { SYNC_KEYS } from "~storage/keys"
+import { push } from "~utils/googleDriveSync"
+
 import { createContextMenu } from "~background/context-menu"
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -7,4 +10,30 @@ chrome.runtime.onInstalled.addListener(async () => {
 // Re-create context menu on startup (service worker restart)
 chrome.runtime.onStartup.addListener(async () => {
   await createContextMenu()
+})
+
+// Auto-sync: push to Google Drive after any change to syncable keys
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local") return
+  const hasSyncKey = SYNC_KEYS.some((k) => k in changes)
+  if (!hasSyncKey) return
+
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(async () => {
+    const { syncConfig } = await chrome.storage.local.get("syncConfig")
+    if (!syncConfig?.token) return
+    try {
+      await push(syncConfig.token)
+      await chrome.storage.local.set({
+        syncConfig: { ...syncConfig, lastSynced: new Date().toISOString(), error: undefined }
+      })
+    } catch (err) {
+      // Mark sync error (token may be expired)
+      await chrome.storage.local.set({
+        syncConfig: { ...syncConfig, error: (err as Error).message }
+      })
+    }
+  }, 2_000)
 })
