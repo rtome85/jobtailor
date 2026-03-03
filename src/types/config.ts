@@ -32,15 +32,23 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
   {
     id: "deepseek-v3.1:671b-cloud",
     name: "DeepSeek V3.1 671B",
-    description: "Massive model, complex reasoning",
+    description:
+      "Premium writing quality and strong contextual tailoring, but slower",
     size: "671B",
     recommended: false
   },
   {
-    id: "qwen3-coder:480b-cloud",
-    name: "Qwen3 Coder 480B",
-    description: "Optimized for technical content",
-    size: "480B",
+    id: "minimax-m2.5:cloud",
+    name: "MiniMax M2.5",
+    description: "Fast modern productivity model, good structured generation",
+    size: "MoE",
+    recommended: false
+  },
+  {
+    id: "glm-5:cloud",
+    name: "GLM-5",
+    description: "Powerful reasoning model, often overkill for CV workflows",
+    size: "MoE",
     recommended: false
   }
 ]
@@ -139,14 +147,22 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     id: "standard",
     name: "Standard",
     tagLine: "General-purpose professional resume.",
-    bullets: ["Professional tone", "Balanced skills & experience", "Suitable for all industries"],
+    bullets: [
+      "Professional tone",
+      "Balanced skills & experience",
+      "Suitable for all industries"
+    ],
     prompts: DEFAULT_PROMPTS
   },
   {
     id: "tech-engineering",
     name: "Tech / Engineering",
     tagLine: "Optimised for software engineering roles.",
-    bullets: ["GitHub, projects & technical depth", "Quantified achievements", "Skills-forward structure"],
+    bullets: [
+      "GitHub, projects & technical depth",
+      "Quantified achievements",
+      "Skills-forward structure"
+    ],
     prompts: {
       resumeSystemPrompt: `You are an expert technical resume writer specialising in software engineering roles. Your task is to create a precise, achievement-driven resume.
 
@@ -170,14 +186,19 @@ STRICT CONTENT RULES — never violate:
 - ONLY describe experiences and education exactly as provided.`,
       resumeUserPromptTemplate: DEFAULT_PROMPTS.resumeUserPromptTemplate,
       coverLetterSystemPrompt: `You are an expert cover letter writer for software engineering roles. Write a direct, confident cover letter that leads with technical impact and concrete achievements. Avoid generic phrases. Reference specific technologies and projects from the candidate's profile. Mention GitHub/portfolio if available.`,
-      coverLetterUserPromptTemplate: DEFAULT_PROMPTS.coverLetterUserPromptTemplate
+      coverLetterUserPromptTemplate:
+        DEFAULT_PROMPTS.coverLetterUserPromptTemplate
     }
   },
   {
     id: "creative-portfolio",
     name: "Creative / Portfolio",
     tagLine: "For designers, PMs and creative professionals.",
-    bullets: ["Portfolio & projects front-and-centre", "Warm narrative tone", "Culture-fit focused cover letter"],
+    bullets: [
+      "Portfolio & projects front-and-centre",
+      "Warm narrative tone",
+      "Culture-fit focused cover letter"
+    ],
     prompts: {
       resumeSystemPrompt: `You are an expert resume writer specialising in creative and product roles (UX/UI designers, product managers, creative directors, content strategists). Your task is to create a compelling, narrative-driven resume.
 
@@ -200,7 +221,8 @@ STRICT CONTENT RULES — never violate:
 - ONLY describe experiences and education exactly as provided.`,
       resumeUserPromptTemplate: DEFAULT_PROMPTS.resumeUserPromptTemplate,
       coverLetterSystemPrompt: `You are an expert cover letter writer for creative and product roles. Write a warm, engaging cover letter that conveys the candidate's creative vision and passion for the role. Use a conversational-yet-professional tone. Show cultural fit and enthusiasm. Reference specific projects or portfolio work where relevant.`,
-      coverLetterUserPromptTemplate: DEFAULT_PROMPTS.coverLetterUserPromptTemplate
+      coverLetterUserPromptTemplate:
+        DEFAULT_PROMPTS.coverLetterUserPromptTemplate
     }
   }
 ]
