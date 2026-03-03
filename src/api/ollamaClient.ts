@@ -133,22 +133,32 @@ export class OllamaClient {
     const tone = {
       formal: "Use formal, precise corporate language throughout.",
       professional: "Use professional yet approachable language.",
-      conversational: "Use warm, engaging language while remaining professional."
+      conversational:
+        "Use warm, engaging language while remaining professional."
     }[tuning.writingTone]
 
     const focus = {
-      skills: "Lead with and prominently feature the candidate's technical skills near the top of the resume.",
-      experience: "Lead with and emphasise Work Experience and concrete achievements above all else.",
+      skills:
+        "Lead with and prominently feature the candidate's technical skills near the top of the resume.",
+      experience:
+        "Lead with and emphasise Work Experience and concrete achievements above all else.",
       balanced: ""
     }[tuning.resumeFocus]
 
     const strictness = {
-      strict: "Be rigorous and critical. Weight missing skills and experience gaps heavily in your assessment. Scores below 50% are expected for imperfect matches.",
-      balanced: "Provide a balanced, fair assessment. Consider both explicit requirements and transferable skills equally.",
-      generous: "Be optimistic and give credit for transferable skills and adjacent experience. Highlight how the candidate's background could apply even when not an exact match."
+      strict:
+        "Be rigorous and critical. Weight missing skills and experience gaps heavily in your assessment. Scores below 50% are expected for imperfect matches.",
+      balanced:
+        "Provide a balanced, fair assessment. Consider both explicit requirements and transferable skills equally.",
+      generous:
+        "Be optimistic and give credit for transferable skills and adjacent experience. Highlight how the candidate's background could apply even when not an exact match."
     }[tuning.matchStrictness]
 
-    return { toneInstruction: tone, focusInstruction: focus, strictnessInstruction: strictness }
+    return {
+      toneInstruction: tone,
+      focusInstruction: focus,
+      strictnessInstruction: strictness
+    }
   }
 
   private interpolatePrompt(
@@ -182,8 +192,13 @@ export class OllamaClient {
       llmTuning = DEFAULT_LLM_TUNING
     } = request
 
-    const { toneInstruction, focusInstruction } = this.tuningInstructions(llmTuning)
-    const extraInstructions = [toneInstruction, focusInstruction].filter(Boolean).join(" ")
+    console.log("model", model)
+
+    const { toneInstruction, focusInstruction } =
+      this.tuningInstructions(llmTuning)
+    const extraInstructions = [toneInstruction, focusInstruction]
+      .filter(Boolean)
+      .join(" ")
     const systemPrompt = extraInstructions
       ? `${prompts.resumeSystemPrompt}\n\nADDITIONAL STYLE INSTRUCTIONS: ${extraInstructions}`
       : prompts.resumeSystemPrompt
