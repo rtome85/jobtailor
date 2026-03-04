@@ -4,6 +4,9 @@
   "version": "0.0.1",
   "description": "Tailor your CV to every job",
   "author": "Roberto Tomé <contact@robtome.com>",
+  "plasmo": {
+    "productName": "JobTailor"
+  },
   "scripts": {
     "dev": "plasmo dev",
     "build": "plasmo build",
@@ -41,7 +44,7 @@
       "identity"
     ],
     "oauth2": {
-      "client_id": "67775878924-1qlfv8huro0qkitm7ejiljit1i06fq7j.apps.googleusercontent.com",
+      "client_id": "67775878924-g6v26qab7anr8jf27enoejr1lfo81g03.apps.googleusercontent.com",
       "scopes": [
         "https://www.googleapis.com/auth/drive.appdata"
       ]
