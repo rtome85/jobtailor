@@ -306,7 +306,7 @@ function IndexDialog() {
     const pct = result.match.percentage
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-100 p-4">
-        <div className="w-full max-w-md p-8 bg-white rounded-2xl shadow-xl">
+        <div className="w-full max-w-2xl p-8 bg-white rounded-2xl shadow-xl">
           <div className="text-center mb-6">
             <div className="text-4xl mb-3">🎉</div>
             <h2 className="text-xl font-bold text-gray-900">Documents Ready!</h2>
@@ -333,10 +333,10 @@ function IndexDialog() {
           </div>
 
           {/* Strengths / Weaknesses / Improvements */}
-          {((result.match.strengths?.length ?? 0) > 0 || (result.match.weaknesses?.length ?? 0) > 0 || (result.match.improvements?.length ?? 0) > 0) && (
-            <div className="space-y-3 mb-5">
+          {((result.match.strengths?.length ?? 0) > 0 || (result.match.weaknesses?.length ?? 0) > 0) && (
+            <div className=" mb-5 flex flex-row gap-2">
               {(result.match.strengths?.length ?? 0) > 0 && (
-                <div className="bg-green-50 border border-green-100 rounded-xl p-4">
+                <div className="flex-1 bg-green-50 border border-green-100 rounded-xl p-4">
                   <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">Strengths</p>
                   <ul className="space-y-1">
                     {result.match.strengths.map((s, i) => (
@@ -350,7 +350,7 @@ function IndexDialog() {
               )}
 
               {(result.match.weaknesses?.length ?? 0) > 0 && (
-                <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+                <div className="flex-1 bg-red-50 border border-red-100 rounded-xl p-4">
                   <p className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-2">Weaknesses</p>
                   <ul className="space-y-1">
                     {result.match.weaknesses.map((w, i) => (
@@ -362,7 +362,11 @@ function IndexDialog() {
                   </ul>
                 </div>
               )}
+            </div>
+          )}
 
+          {((result.match.improvements?.length ?? 0) > 0) && (
+            <div className="mb-5">
               {(result.match.improvements?.length ?? 0) > 0 && (
                 <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
                   <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-2">Improvements</p>
