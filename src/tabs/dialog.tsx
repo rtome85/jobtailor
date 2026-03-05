@@ -128,6 +128,7 @@ function IndexDialog() {
   const [result, setResult] = useState<GenerationResult | null>(null)
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null)
   const [companyInfoLoading, setCompanyInfoLoading] = useState(false)
+  const [projectsExpanded, setProjectsExpanded] = useState(false)
   const [perplexityConfig, setPerplexityConfig] =
     useState<PerplexityConfig | null>(null)
 
@@ -303,16 +304,26 @@ function IndexDialog() {
             )
           }
 
-          const projectsMatch = content.match(
-            /(?:projects?|products?|notable)[\s*\*\*:]*([^\n]+(?:\n[^\n-]+)*)/i
+          const notableProjects: string[] = []
+          const contentLines = content.split("\n")
+          const sectionIdx = contentLines.findIndex((l) =>
+            /notable\s*projects?|projects?,\s*products?|projects?,\s*products?\s*,?\s*or\s*services?/i.test(l)
           )
-          const notableProjects = projectsMatch
-            ? projectsMatch[1]
-              .split(/[-•*]/)
-              .filter((p) => p.trim().length > 3)
-              .slice(0, 5)
-              .map((p) => p.trim())
-            : []
+          if (sectionIdx >= 0) {
+            for (let i = sectionIdx + 1; i < contentLines.length; i++) {
+              const line = contentLines[i]
+              const trimmed = line.trim()
+              if (!trimmed || /^- \*\*/.test(line)) break
+              const bulletMatch = trimmed.match(/^[-•*]\s+(.+)/)
+              if (bulletMatch) {
+                const cleaned = bulletMatch[1]
+                  .replace(/\[\d+\]/g, "")
+                  .replace(/\*\*/g, "")
+                  .trim()
+                if (cleaned.length > 3) notableProjects.push(cleaned)
+              }
+            }
+          }
 
           setCompanyInfo({
             industry: cleanField(industry),
@@ -676,14 +687,28 @@ function IndexDialog() {
 
                     {companyInfo.notableProjects.length > 0 && (
                       <div className="mb-3">
-                        <p className="text-xs font-semibold text-indigo-700 mb-1.5">
-                          Notable projects / products
-                        </p>
-                        <ul className="list-disc list-inside text-xs text-gray-600 space-y-0.5">
-                          {companyInfo.notableProjects.map((project, idx) => (
-                            <li key={`${project}-${idx}`}>{project}</li>
-                          ))}
-                        </ul>
+                        <button
+                          onClick={() => setProjectsExpanded((v) => !v)}
+                          className="flex items-center gap-1.5 w-full text-left text-xs font-semibold text-indigo-700 mb-1">
+                          <span
+                            className="transition-transform duration-200"
+                            style={{
+                              display: "inline-block",
+                              transform: projectsExpanded
+                                ? "rotate(90deg)"
+                                : "rotate(0deg)"
+                            }}>
+                            ▶
+                          </span>
+                          Notable projects / products ({companyInfo.notableProjects.length})
+                        </button>
+                        {projectsExpanded && (
+                          <ul className="list-disc list-inside text-xs text-gray-600 space-y-1 pl-1 mt-1.5">
+                            {companyInfo.notableProjects.map((project, idx) => (
+                              <li key={`${project}-${idx}`}>{project}</li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
                     )}
 
