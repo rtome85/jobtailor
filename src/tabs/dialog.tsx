@@ -1,10 +1,23 @@
+import {
+  Briefcase,
+  Building2,
+  Download,
+  ExternalLink,
+  Eye,
+  FileText,
+  Mail,
+  Pencil,
+  Trash2,
+  Users,
+  X
+} from "lucide-react"
 import { useEffect, useRef, useState } from "react"
-
-import { Briefcase, Download, ExternalLink, Eye, FileText, Mail, Pencil, Trash2, X } from "lucide-react"
 
 import { sendToBackground } from "@plasmohq/messaging"
 
+import type { CompanyInfo } from "~api/perplexityClient"
 import { AVAILABLE_MODELS } from "~types/config"
+import type { PerplexityConfig } from "~types/config"
 import {
   APPLICATION_STATUSES,
   DEFAULT_USER_PROFILE,
@@ -17,18 +30,51 @@ import { downloadMarkdownFile } from "~utils/documentFormatter"
 import "../style.css"
 
 const QUOTES = [
-  { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
-  { text: "It always seems impossible until it's done.", author: "Nelson Mandela" },
-  { text: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt" },
-  { text: "In the middle of every difficulty lies opportunity.", author: "Albert Einstein" },
-  { text: "Success is not final, failure is not fatal: it is the courage to continue that counts.", author: "Winston Churchill" },
-  { text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
-  { text: "Luck is what happens when preparation meets opportunity.", author: "Seneca" },
-  { text: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius" },
-  { text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
+  {
+    text: "The secret of getting ahead is getting started.",
+    author: "Mark Twain"
+  },
+  {
+    text: "It always seems impossible until it's done.",
+    author: "Nelson Mandela"
+  },
+  {
+    text: "The future belongs to those who believe in the beauty of their dreams.",
+    author: "Eleanor Roosevelt"
+  },
+  {
+    text: "In the middle of every difficulty lies opportunity.",
+    author: "Albert Einstein"
+  },
+  {
+    text: "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+    author: "Winston Churchill"
+  },
+  {
+    text: "The only way to do great work is to love what you do.",
+    author: "Steve Jobs"
+  },
+  {
+    text: "Luck is what happens when preparation meets opportunity.",
+    author: "Seneca"
+  },
+  {
+    text: "It does not matter how slowly you go as long as you do not stop.",
+    author: "Confucius"
+  },
+  {
+    text: "Believe you can and you're halfway there.",
+    author: "Theodore Roosevelt"
+  },
   { text: "The harder I work, the luckier I get.", author: "Samuel Goldwyn" },
-  { text: "An investment in knowledge pays the best interest.", author: "Benjamin Franklin" },
-  { text: "Your time is limited, don't waste it living someone else's life.", author: "Steve Jobs" }
+  {
+    text: "An investment in knowledge pays the best interest.",
+    author: "Benjamin Franklin"
+  },
+  {
+    text: "Your time is limited, don't waste it living someone else's life.",
+    author: "Steve Jobs"
+  }
 ]
 
 interface GenerationResult {
@@ -63,12 +109,15 @@ function statusBadgeClass(status: ApplicationStatus): string {
 }
 
 function IndexDialog() {
-  const initialView = new URLSearchParams(window.location.search).get("view") as View | null
+  const initialView = new URLSearchParams(window.location.search).get(
+    "view"
+  ) as View | null
   const [view, setView] = useState<View>(initialView ?? "form")
   const [companyName, setCompanyName] = useState("")
   const [jobTitle, setJobTitle] = useState("")
   const [selectedModel, setSelectedModel] = useState("gpt-oss:20b-cloud")
-  const [userProfile, setUserProfile] = useState<UserProfile>(DEFAULT_USER_PROFILE)
+  const [userProfile, setUserProfile] =
+    useState<UserProfile>(DEFAULT_USER_PROFILE)
   const [status, setStatus] = useState("")
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -77,31 +126,49 @@ function IndexDialog() {
   )
   const [quoteVisible, setQuoteVisible] = useState(true)
   const [result, setResult] = useState<GenerationResult | null>(null)
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null)
+  const [companyInfoLoading, setCompanyInfoLoading] = useState(false)
+  const [perplexityConfig, setPerplexityConfig] =
+    useState<PerplexityConfig | null>(null)
 
   // Application tracker state
-  const [savedApplications, setSavedApplications] = useState<SavedApplication[]>([])
-  const [editingApplication, setEditingApplication] = useState<SavedApplication | null>(null)
-  const [viewingApplication, setViewingApplication] = useState<SavedApplication | null>(null)
+  const [savedApplications, setSavedApplications] = useState<
+    SavedApplication[]
+  >([])
+  const [editingApplication, setEditingApplication] =
+    useState<SavedApplication | null>(null)
+  const [viewingApplication, setViewingApplication] =
+    useState<SavedApplication | null>(null)
   const [pendingJobUrl, setPendingJobUrl] = useState("")
   const [saveFormData, setSaveFormData] = useState({
     company: "",
     jobTitle: "",
     status: "Saved" as ApplicationStatus,
     date: new Date().toISOString().split("T")[0],
-    jobUrl: "",
+    jobUrl: ""
   })
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   // Track where the save form was opened from so Cancel goes back correctly
-  const [saveFormOrigin, setSaveFormOrigin] = useState<"success" | "applicationsList">("success")
+  const [saveFormOrigin, setSaveFormOrigin] = useState<
+    "success" | "applicationsList"
+  >("success")
   const [saveDocs, setSaveDocs] = useState(true)
   const [saveFormError, setSaveFormError] = useState("")
 
-  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  )
   const quoteIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     chrome.storage.local.get(
-      ["lastSelectedModel", "userProfile", "pendingJobData", "savedApplications"],
+      [
+        "lastSelectedModel",
+        "userProfile",
+        "pendingJobData",
+        "savedApplications",
+        "perplexityConfig"
+      ],
       (res) => {
         if (res.lastSelectedModel) setSelectedModel(res.lastSelectedModel)
         if (res.userProfile) setUserProfile(res.userProfile)
@@ -112,6 +179,7 @@ function IndexDialog() {
         if (res.pendingJobData?.tabUrl)
           setPendingJobUrl(res.pendingJobData.tabUrl)
         if (res.savedApplications) setSavedApplications(res.savedApplications)
+        if (res.perplexityConfig) setPerplexityConfig(res.perplexityConfig)
       }
     )
   }, [])
@@ -148,10 +216,152 @@ function IndexDialog() {
     }
 
     return () => {
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
+      if (progressIntervalRef.current)
+        clearInterval(progressIntervalRef.current)
       if (quoteIntervalRef.current) clearInterval(quoteIntervalRef.current)
     }
   }, [loading])
+
+  useEffect(() => {
+    if (
+      !result ||
+      !companyName ||
+      !perplexityConfig?.enabled ||
+      !perplexityConfig?.apiKey
+    ) {
+      setCompanyInfo(null)
+      setCompanyInfoLoading(false)
+      return
+    }
+
+    const fetchCompanyInfo = async () => {
+      setCompanyInfoLoading(true)
+      setCompanyInfo(null)
+      try {
+        const response = await fetch(
+          "https://api.perplexity.ai/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${perplexityConfig.apiKey}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              model: "sonar",
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    "You are a company research assistant. Provide accurate, concise information about companies based on your web search capabilities."
+                },
+                {
+                  role: "user",
+                  content: perplexityConfig.customPrompt.replace(
+                    /\{\{companyName\}\}/g,
+                    companyName
+                  )
+                }
+              ],
+              max_tokens: 800,
+              temperature: 0.2
+            })
+          }
+        )
+
+        if (response.ok) {
+          const data = await response.json()
+          const content = data.choices?.[0]?.["message"]?.["content"] || ""
+
+          const industry =
+            extractField(
+              content,
+              /(?:^|\n)[^\n]*(?:sector|industry|field)[^\n]*:\s*([^\n]+)/i
+            ) || "Not available"
+          const size =
+            extractField(
+              content,
+              /(?:^|\n)[^\n]*(?:employees|size|people)[^\n]*:\s*([^\n]+)/i
+            ) || "Not available"
+
+          const descMatch = content.match(
+            /(?:^|\n)[^\n]*(?:description|about|overview)[^\n]*:\s*([^\n]+(?:\n[^\n]+)?)/i
+          )
+          const description = descMatch?.[1]?.trim() || ""
+
+          const ratings = {
+            glassdoor: extractRating(
+              content,
+              /glassdoor[\s*]*(\d+\.?\d*)\s*[\/★]?[s]?/i
+            ),
+            indeed: extractRating(
+              content,
+              /indeed[\s*]*(\d+\.?\d*)\s*[\/★]?[s]?/i
+            ),
+            teamlyzer: extractRating(
+              content,
+              /teamlyzer[\s*]*(\d+\.?\d*)\s*[\/★]?[s]?/i
+            )
+          }
+
+          const projectsMatch = content.match(
+            /(?:projects?|products?|notable)[\s*\*\*:]*([^\n]+(?:\n[^\n-]+)*)/i
+          )
+          const notableProjects = projectsMatch
+            ? projectsMatch[1]
+              .split(/[-•*]/)
+              .filter((p) => p.trim().length > 3)
+              .slice(0, 5)
+              .map((p) => p.trim())
+            : []
+
+          setCompanyInfo({
+            industry: cleanField(industry),
+            size: cleanField(size),
+            description: cleanField(description),
+            notableProjects,
+            ratings,
+            sources: []
+          })
+        } else {
+          setCompanyInfo(null)
+        }
+      } catch (error) {
+        setCompanyInfo(null)
+        console.error("Failed to fetch company info:", error)
+      } finally {
+        setCompanyInfoLoading(false)
+      }
+    }
+
+    fetchCompanyInfo()
+  }, [result, companyName, perplexityConfig])
+
+  const extractField = (content: string, regex: RegExp): string | undefined => {
+    const match = content.match(regex)
+    return match?.[1]?.trim()
+  }
+
+  const cleanField = (value: string): string => {
+    return value
+      .replace(/\*\*/g, "")
+      .replace(/\*/g, "")
+      .replace(/^[\s:,\-]+|[\s:,\-]+$/g, "")
+      .replace(/\[\d+\]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+  }
+
+  const extractRating = (
+    content: string,
+    regex: RegExp
+  ): number | undefined => {
+    const match = content.match(regex)
+    if (match) {
+      const rating = parseFloat(match[1])
+      return rating >= 0 && rating <= 5 ? rating : undefined
+    }
+    return undefined
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -193,7 +403,10 @@ function IndexDialog() {
     }
   }
 
-  const openSaveForm = (origin: "success" | "applicationsList", app: SavedApplication | null = null) => {
+  const openSaveForm = (
+    origin: "success" | "applicationsList",
+    app: SavedApplication | null = null
+  ) => {
     setEditingApplication(app)
     setSaveFormOrigin(origin)
 
@@ -207,7 +420,7 @@ function IndexDialog() {
         jobTitle: app.jobTitle,
         status: app.status,
         date: app.date,
-        jobUrl: app.jobUrl ?? "",
+        jobUrl: app.jobUrl ?? ""
       })
     } else {
       setSaveFormData({
@@ -215,36 +428,46 @@ function IndexDialog() {
         jobTitle: jobTitle,
         status: "Saved",
         date: new Date().toISOString().split("T")[0],
-        jobUrl: pendingJobUrl,
+        jobUrl: pendingJobUrl
       })
     }
     setView("saveForm")
   }
 
   const handleSaveApplication = () => {
-    if (!saveFormData.company.trim() || !saveFormData.jobTitle.trim() || !saveFormData.date) {
+    if (
+      !saveFormData.company.trim() ||
+      !saveFormData.jobTitle.trim() ||
+      !saveFormData.date
+    ) {
       setSaveFormError("Company, job title, and date are required.")
       return
     }
     setSaveFormError("")
 
-    const docs = !editingApplication && result && saveDocs
-      ? {
-        resumeContent: result.resumeContent,
-        resumeFilename: result.resumeFilename,
-        coverLetterContent: result.coverLetterContent,
-        coverLetterFilename: result.coverLetterFilename,
-      }
-      : {}
+    const docs =
+      !editingApplication && result && saveDocs
+        ? {
+          resumeContent: result.resumeContent,
+          resumeFilename: result.resumeFilename,
+          coverLetterContent: result.coverLetterContent,
+          coverLetterFilename: result.coverLetterFilename
+        }
+        : {}
 
-    const matchData = !editingApplication && result
-      ? { matchPercentage: result.match.percentage }
-      : {}
+    const matchData =
+      !editingApplication && result
+        ? { matchPercentage: result.match.percentage }
+        : {}
 
     const updated: SavedApplication[] = editingApplication
       ? savedApplications.map((a) =>
         a.id === editingApplication.id
-          ? { ...a, ...saveFormData, jobUrl: saveFormData.jobUrl || undefined }
+          ? {
+            ...a,
+            ...saveFormData,
+            jobUrl: saveFormData.jobUrl || undefined
+          }
           : a
       )
       : [
@@ -255,8 +478,8 @@ function IndexDialog() {
           ...docs,
           ...matchData,
           id: crypto.randomUUID(),
-          createdAt: new Date().toISOString(),
-        },
+          createdAt: new Date().toISOString()
+        }
       ]
     chrome.storage.local.set({ savedApplications: updated })
     setSavedApplications(updated)
@@ -283,7 +506,9 @@ function IndexDialog() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-100 p-4">
         <div className="w-full max-w-md p-8 bg-white rounded-2xl shadow-xl text-center">
           <div className="text-4xl mb-4">✨</div>
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Crafting your documents…</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">
+            Crafting your documents…
+          </h2>
           <p className="text-sm text-gray-500 mb-6">This may take a minute</p>
 
           <div className="w-full bg-gray-100 rounded-full h-2.5 mb-8 overflow-hidden">
@@ -314,15 +539,24 @@ function IndexDialog() {
         <div className="w-full max-w-2xl p-8 bg-white rounded-2xl shadow-xl">
           <div className="text-center mb-6">
             <div className="text-4xl mb-3">🎉</div>
-            <h2 className="text-xl font-bold text-gray-900">Documents Ready!</h2>
+            <h2 className="text-xl font-bold text-gray-900">
+              Documents Ready!
+            </h2>
           </div>
 
           {/* Match score card */}
           <div className="bg-gray-50 rounded-xl p-5 mb-5">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-semibold text-gray-700">Match Score</span>
-              <span className={`text-2xl font-bold ${pct >= 70 ? "text-green-600" : pct >= 50 ? "text-yellow-600" : "text-red-600"
-                }`}>
+              <span className="text-sm font-semibold text-gray-700">
+                Match Score
+              </span>
+              <span
+                className={`text-2xl font-bold ${pct >= 70
+                  ? "text-green-600"
+                  : pct >= 50
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                  }`}>
                 {pct}%
               </span>
             </div>
@@ -333,48 +567,57 @@ function IndexDialog() {
               />
             </div>
             {result.match.summary && (
-              <p className="text-xs text-gray-600 leading-relaxed">{result.match.summary}</p>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                {result.match.summary}
+              </p>
             )}
           </div>
 
           {/* Strengths / Weaknesses / Improvements */}
-          {((result.match.strengths?.length ?? 0) > 0 || (result.match.weaknesses?.length ?? 0) > 0) && (
-            <div className=" mb-5 flex flex-row gap-2">
-              {(result.match.strengths?.length ?? 0) > 0 && (
-                <div className="flex-1 bg-green-50 border border-green-100 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">Strengths</p>
-                  <ul className="space-y-1">
-                    {result.match.strengths.map((s, i) => (
-                      <li key={i} className="flex gap-2 text-xs text-green-800">
-                        <span className="mt-0.5 shrink-0">✓</span>
-                        <span>{s}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+          {((result.match.strengths?.length ?? 0) > 0 ||
+            (result.match.weaknesses?.length ?? 0) > 0) && (
+              <div className=" mb-5 flex flex-row gap-2">
+                {(result.match.strengths?.length ?? 0) > 0 && (
+                  <div className="flex-1 bg-green-50 border border-green-100 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">
+                      Strengths
+                    </p>
+                    <ul className="space-y-1">
+                      {result.match.strengths.map((s, i) => (
+                        <li key={i} className="flex gap-2 text-xs text-green-800">
+                          <span className="mt-0.5 shrink-0">✓</span>
+                          <span>{s}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-              {(result.match.weaknesses?.length ?? 0) > 0 && (
-                <div className="flex-1 bg-red-50 border border-red-100 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-2">Weaknesses</p>
-                  <ul className="space-y-1">
-                    {result.match.weaknesses.map((w, i) => (
-                      <li key={i} className="flex gap-2 text-xs text-red-800">
-                        <span className="mt-0.5 shrink-0">✗</span>
-                        <span>{w}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
+                {(result.match.weaknesses?.length ?? 0) > 0 && (
+                  <div className="flex-1 bg-red-50 border border-red-100 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-2">
+                      Weaknesses
+                    </p>
+                    <ul className="space-y-1">
+                      {result.match.weaknesses.map((w, i) => (
+                        <li key={i} className="flex gap-2 text-xs text-red-800">
+                          <span className="mt-0.5 shrink-0">✗</span>
+                          <span>{w}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
 
-          {((result.match.improvements?.length ?? 0) > 0) && (
+          {(result.match.improvements?.length ?? 0) > 0 && (
             <div className="mb-5">
               {(result.match.improvements?.length ?? 0) > 0 && (
                 <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-2">Improvements</p>
+                  <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-2">
+                    Improvements
+                  </p>
                   <ul className="space-y-1">
                     {result.match.improvements.map((imp, i) => (
                       <li key={i} className="flex gap-2 text-xs text-blue-800">
@@ -388,11 +631,121 @@ function IndexDialog() {
             </div>
           )}
 
+          {/* Company About Section */}
+          {(companyInfo || companyInfoLoading) && (
+            <div className="mb-5">
+              {companyInfoLoading ? (
+                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 animate-pulse">
+                  <div className="flex items-center gap-2 text-indigo-600">
+                    <Building2 className="w-4 h-4" />
+                    <span className="text-sm font-medium">
+                      Researching {companyName}...
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                companyInfo && (
+                  <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Building2 className="w-4 h-4 text-indigo-600" />
+                      <h3 className="text-sm font-semibold text-indigo-700">
+                        About {companyName}
+                      </h3>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3 mb-3 text-xs">
+                      <div className="flex items-center gap-1.5 bg-white rounded-lg px-2.5 py-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-gray-400" />
+                        <span className="text-gray-600">
+                          {companyInfo.industry}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-white rounded-lg px-2.5 py-1.5">
+                        <Users className="w-3.5 h-3.5 text-gray-400" />
+                        <span className="text-gray-600">
+                          {companyInfo.size}
+                        </span>
+                      </div>
+                    </div>
+
+                    {companyInfo.description && (
+                      <p className="text-xs text-gray-600 mb-3 leading-relaxed">
+                        {companyInfo.description}
+                      </p>
+                    )}
+
+                    {companyInfo.notableProjects.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-xs font-semibold text-indigo-700 mb-1.5">
+                          Notable projects / products
+                        </p>
+                        <ul className="list-disc list-inside text-xs text-gray-600 space-y-0.5">
+                          {companyInfo.notableProjects.map((project, idx) => (
+                            <li key={`${project}-${idx}`}>{project}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {(companyInfo.ratings.glassdoor ||
+                      companyInfo.ratings.indeed ||
+                      companyInfo.ratings.teamlyzer) && (
+                        <div className="flex flex-wrap gap-2">
+                          {companyInfo.ratings.glassdoor && (
+                            <span className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded text-xs font-medium">
+                              <span className="text-gray-500">Glassdoor</span>
+                              <span
+                                className={
+                                  companyInfo.ratings.glassdoor >= 3.5
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                }>
+                                {companyInfo.ratings.glassdoor}★
+                              </span>
+                            </span>
+                          )}
+                          {companyInfo.ratings.indeed && (
+                            <span className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded text-xs font-medium">
+                              <span className="text-gray-500">Indeed</span>
+                              <span
+                                className={
+                                  companyInfo.ratings.indeed >= 3.5
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                }>
+                                {companyInfo.ratings.indeed}★
+                              </span>
+                            </span>
+                          )}
+                          {companyInfo.ratings.teamlyzer && (
+                            <span className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded text-xs font-medium">
+                              <span className="text-gray-500">Teamlyzer</span>
+                              <span
+                                className={
+                                  companyInfo.ratings.teamlyzer >= 3.5
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                }>
+                                {companyInfo.ratings.teamlyzer}★
+                              </span>
+                            </span>
+                          )}
+                        </div>
+                      )}
+                  </div>
+                )
+              )}
+            </div>
+          )}
+
           {/* Download buttons */}
           <div className="space-y-3">
             <button
               onClick={() =>
-                downloadMarkdownFile(result.resumeFilename, result.resumeContent)
+                downloadMarkdownFile(
+                  result.resumeFilename,
+                  result.resumeContent
+                )
               }
               className="w-full flex items-center justify-center gap-2 px-4 py-3
                          bg-gradient-to-r from-purple-500 to-purple-600
@@ -403,7 +756,10 @@ function IndexDialog() {
 
             <button
               onClick={() =>
-                downloadMarkdownFile(result.coverLetterFilename, result.coverLetterContent)
+                downloadMarkdownFile(
+                  result.coverLetterFilename,
+                  result.coverLetterContent
+                )
               }
               className="w-full flex items-center justify-center gap-2 px-4 py-3
                          bg-gradient-to-r from-indigo-500 to-indigo-600
@@ -449,7 +805,9 @@ function IndexDialog() {
             <h2 className="text-xl font-bold text-gray-900">
               {editingApplication ? "Edit Application" : "Save Application"}
             </h2>
-            <p className="text-sm text-gray-500 mt-1">Track your job application</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Track your job application
+            </p>
           </div>
 
           <div className="space-y-4">
@@ -492,7 +850,7 @@ function IndexDialog() {
                 onChange={(e) =>
                   setSaveFormData((d) => ({
                     ...d,
-                    status: e.target.value as ApplicationStatus,
+                    status: e.target.value as ApplicationStatus
                   }))
                 }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg
@@ -581,7 +939,9 @@ function IndexDialog() {
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
             <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6">
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-lg font-bold text-gray-900">Application Details</h3>
+                <h3 className="text-lg font-bold text-gray-900">
+                  Application Details
+                </h3>
                 <button
                   onClick={() => setViewingApplication(null)}
                   className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
@@ -590,34 +950,53 @@ function IndexDialog() {
               </div>
               <dl className="space-y-3">
                 <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Company</dt>
-                  <dd className="text-sm text-gray-900 mt-0.5">{viewingApplication.company}</dd>
+                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    Company
+                  </dt>
+                  <dd className="text-sm text-gray-900 mt-0.5">
+                    {viewingApplication.company}
+                  </dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Job Title</dt>
-                  <dd className="text-sm text-gray-900 mt-0.5">{viewingApplication.jobTitle}</dd>
+                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    Job Title
+                  </dt>
+                  <dd className="text-sm text-gray-900 mt-0.5">
+                    {viewingApplication.jobTitle}
+                  </dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    Status
+                  </dt>
                   <dd className="mt-0.5">
-                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusBadgeClass(viewingApplication.status)}`}>
+                    <span
+                      className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusBadgeClass(viewingApplication.status)}`}>
                       {viewingApplication.status}
                     </span>
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Date Applied</dt>
-                  <dd className="text-sm text-gray-900 mt-0.5">{viewingApplication.date}</dd>
+                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    Date Applied
+                  </dt>
+                  <dd className="text-sm text-gray-900 mt-0.5">
+                    {viewingApplication.date}
+                  </dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Saved At</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    Saved At
+                  </dt>
                   <dd className="text-sm text-gray-900 mt-0.5">
                     {new Date(viewingApplication.createdAt).toLocaleString()}
                   </dd>
                 </div>
                 {viewingApplication.jobUrl && (
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Job Posting</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      Job Posting
+                    </dt>
                     <dd className="text-sm mt-0.5">
                       <a
                         href={viewingApplication.jobUrl}
@@ -630,31 +1009,46 @@ function IndexDialog() {
                   </div>
                 )}
               </dl>
-              {(viewingApplication.resumeContent || viewingApplication.coverLetterContent) && (
-                <div className="mt-5 pt-4 border-t border-gray-100 space-y-2">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Documents</p>
-                  {viewingApplication.resumeContent && viewingApplication.resumeFilename && (
-                    <button
-                      onClick={() => downloadMarkdownFile(viewingApplication.resumeFilename, viewingApplication.resumeContent)}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5
+              {(viewingApplication.resumeContent ||
+                viewingApplication.coverLetterContent) && (
+                  <div className="mt-5 pt-4 border-t border-gray-100 space-y-2">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                      Documents
+                    </p>
+                    {viewingApplication.resumeContent &&
+                      viewingApplication.resumeFilename && (
+                        <button
+                          onClick={() =>
+                            downloadMarkdownFile(
+                              viewingApplication.resumeFilename,
+                              viewingApplication.resumeContent
+                            )
+                          }
+                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5
                                  bg-gradient-to-r from-purple-500 to-purple-600
                                  text-white text-sm rounded-lg hover:opacity-90 transition-opacity font-medium">
-                      <Download size={14} />
-                      <span>Download CV</span>
-                    </button>
-                  )}
-                  {viewingApplication.coverLetterContent && viewingApplication.coverLetterFilename && (
-                    <button
-                      onClick={() => downloadMarkdownFile(viewingApplication.coverLetterFilename, viewingApplication.coverLetterContent)}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5
+                          <Download size={14} />
+                          <span>Download CV</span>
+                        </button>
+                      )}
+                    {viewingApplication.coverLetterContent &&
+                      viewingApplication.coverLetterFilename && (
+                        <button
+                          onClick={() =>
+                            downloadMarkdownFile(
+                              viewingApplication.coverLetterFilename,
+                              viewingApplication.coverLetterContent
+                            )
+                          }
+                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5
                                  bg-gradient-to-r from-indigo-500 to-indigo-600
                                  text-white text-sm rounded-lg hover:opacity-90 transition-opacity font-medium">
-                      <Download size={14} />
-                      <span>Download Cover Letter</span>
-                    </button>
-                  )}
-                </div>
-              )}
+                          <Download size={14} />
+                          <span>Download Cover Letter</span>
+                        </button>
+                      )}
+                  </div>
+                )}
             </div>
           </div>
         )}
@@ -662,8 +1056,13 @@ function IndexDialog() {
         <div className="max-w-3xl mx-auto">
           <div className="flex items-center justify-between mb-6 pt-2">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Saved Applications</h2>
-              <p className="text-sm text-gray-500 mt-0.5">{savedApplications.length} application{savedApplications.length !== 1 ? "s" : ""}</p>
+              <h2 className="text-xl font-bold text-gray-900">
+                Saved Applications
+              </h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {savedApplications.length} application
+                {savedApplications.length !== 1 ? "s" : ""}
+              </p>
             </div>
             <div className="flex gap-2">
               {result && (
@@ -690,20 +1089,36 @@ function IndexDialog() {
               <div className="flex justify-center mb-4">
                 <Briefcase size={36} className="text-gray-200" />
               </div>
-              <p className="text-gray-600 text-sm font-medium">No applications saved yet</p>
-              <p className="text-gray-400 text-xs mt-1">Save your first application after generating documents.</p>
+              <p className="text-gray-600 text-sm font-medium">
+                No applications saved yet
+              </p>
+              <p className="text-gray-400 text-xs mt-1">
+                Save your first application after generating documents.
+              </p>
             </div>
           ) : (
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50">
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Company</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Job Title</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Match %</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Company
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Job Title
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">
+                      Match %
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Status
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Date
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Actions
+                    </th>
                     <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
@@ -728,15 +1143,18 @@ function IndexDialog() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-gray-600">{app.jobTitle}</td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {app.jobTitle}
+                      </td>
                       <td className="px-4 py-3">
                         {app.matchPercentage != null ? (
-                          <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${app.matchPercentage >= 70
-                            ? "bg-green-100 text-green-800"
-                            : app.matchPercentage >= 50
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                            }`}>
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${app.matchPercentage >= 70
+                              ? "bg-green-100 text-green-800"
+                              : app.matchPercentage >= 50
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
+                              }`}>
                             {app.matchPercentage}%
                           </span>
                         ) : (
@@ -744,11 +1162,14 @@ function IndexDialog() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusBadgeClass(app.status)}`}>
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusBadgeClass(app.status)}`}>
                           {app.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{app.date}</td>
+                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                        {app.date}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-0.5 justify-end">
                           <button
@@ -759,26 +1180,39 @@ function IndexDialog() {
                           </button>
                           <button
                             title="Edit"
-                            onClick={() => openSaveForm("applicationsList", app)}
+                            onClick={() =>
+                              openSaveForm("applicationsList", app)
+                            }
                             className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
                             <Pencil size={14} />
                           </button>
                           {app.resumeContent && app.resumeFilename && (
                             <button
                               title="Download CV"
-                              onClick={() => downloadMarkdownFile(app.resumeFilename, app.resumeContent)}
+                              onClick={() =>
+                                downloadMarkdownFile(
+                                  app.resumeFilename,
+                                  app.resumeContent
+                                )
+                              }
                               className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
                               <FileText size={14} />
                             </button>
                           )}
-                          {app.coverLetterContent && app.coverLetterFilename && (
-                            <button
-                              title="Download Cover Letter"
-                              onClick={() => downloadMarkdownFile(app.coverLetterFilename, app.coverLetterContent)}
-                              className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
-                              <Mail size={14} />
-                            </button>
-                          )}
+                          {app.coverLetterContent &&
+                            app.coverLetterFilename && (
+                              <button
+                                title="Download Cover Letter"
+                                onClick={() =>
+                                  downloadMarkdownFile(
+                                    app.coverLetterFilename,
+                                    app.coverLetterContent
+                                  )
+                                }
+                                className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                                <Mail size={14} />
+                              </button>
+                            )}
                           <div className="w-px h-4 bg-gray-200 mx-1" />
                           {deleteConfirmId === app.id ? (
                             <button
@@ -813,7 +1247,9 @@ function IndexDialog() {
       <div className="w-full max-w-md p-6 bg-white rounded-2xl shadow-xl">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Generate Documents</h1>
+            <h1 className="text-xl font-bold text-gray-900">
+              Generate Documents
+            </h1>
             <p className="text-sm text-gray-500 mt-1">
               Confirm job details and select model
             </p>
@@ -868,7 +1304,9 @@ function IndexDialog() {
                        focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white">
               {AVAILABLE_MODELS.map((model) => (
                 <option key={model.id} value={model.id}>
-                  {model.name}{model.recommended ? " (Recommended)" : ""} — {model.description}
+                  {model.name}
+                  {model.recommended ? " (Recommended)" : ""} —{" "}
+                  {model.description}
                 </option>
               ))}
             </select>

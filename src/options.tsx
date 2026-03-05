@@ -12,9 +12,25 @@ import { ProjectEditor } from "~components/ProjectEditor"
 import { PromptDialog } from "~components/PromptDialog"
 import { SkillEditor } from "~components/SkillEditor"
 import { Tabs } from "~components/Tabs"
-import { AVAILABLE_MODELS, DEFAULT_LLM_TUNING, DEFAULT_PROMPTS, PROMPT_TEMPLATES, PROMPTS_VERSION, type CustomPrompts, type LLMTuningConfig, type PromptTemplate } from "~types/config"
+import {
+  AVAILABLE_MODELS,
+  DEFAULT_LLM_TUNING,
+  DEFAULT_PERPLEXITY_PROMPT,
+  DEFAULT_PROMPTS,
+  PROMPT_TEMPLATES,
+  PROMPTS_VERSION,
+  type CustomPrompts,
+  type LLMTuningConfig,
+  type PerplexityConfig,
+  type PromptTemplate
+} from "~types/config"
 import { DEFAULT_USER_PROFILE, type UserProfile } from "~types/userProfile"
-import { authorize, pull, revoke, type SyncConfig } from "~utils/googleDriveSync"
+import {
+  authorize,
+  pull,
+  revoke,
+  type SyncConfig
+} from "~utils/googleDriveSync"
 
 import "./style.css"
 
@@ -32,6 +48,15 @@ function Options() {
     enabled: false
   })
 
+  const [perplexityConfig, setPerplexityConfig] = useStorage<PerplexityConfig>(
+    "perplexityConfig",
+    {
+      apiKey: "",
+      enabled: false,
+      customPrompt: DEFAULT_PERPLEXITY_PROMPT
+    }
+  )
+
   const [customPrompts, setCustomPrompts] = useStorage<CustomPrompts>(
     "customPrompts",
     DEFAULT_PROMPTS
@@ -42,10 +67,11 @@ function Options() {
     DEFAULT_LLM_TUNING
   )
 
-  const [storedPromptsVersion, setStoredPromptsVersion, { isLoading: isVersionLoading }] = useStorage<string>(
-    "promptsVersion",
-    ""
-  )
+  const [
+    storedPromptsVersion,
+    setStoredPromptsVersion,
+    { isLoading: isVersionLoading }
+  ] = useStorage<string>("promptsVersion", "")
 
   useEffect(() => {
     if (!isVersionLoading && storedPromptsVersion !== PROMPTS_VERSION) {
@@ -59,9 +85,17 @@ function Options() {
     message: string
   }>({ type: "idle", message: "" })
 
+  const [perplexityTestStatus, setPerplexityTestStatus] = useState<{
+    type: "idle" | "loading" | "success" | "error"
+    message: string
+  }>({ type: "idle", message: "" })
+
   const [saveStatus, setSaveStatus] = useState("")
 
-  const [syncConfig, setSyncConfig] = useStorage<SyncConfig | null>("syncConfig", null)
+  const [syncConfig, setSyncConfig] = useStorage<SyncConfig | null>(
+    "syncConfig",
+    null
+  )
   const [syncStatus, setSyncStatus] = useState<{
     type: "idle" | "loading" | "success" | "error"
     message: string
@@ -105,8 +139,75 @@ function Options() {
     setTimeout(() => setTestStatus({ type: "idle", message: "" }), 5000)
   }
 
+  const handleTestPerplexity = async () => {
+    if (!perplexityConfig.apiKey) {
+      setPerplexityTestStatus({
+        type: "error",
+        message: "Please enter API key first"
+      })
+      return
+    }
+
+    setPerplexityTestStatus({
+      type: "loading",
+      message: "Testing connection..."
+    })
+
+    try {
+      const response = await fetch(
+        "https://api.perplexity.ai/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${perplexityConfig.apiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "sonar",
+            messages: [
+              { role: "system", content: "You are a helpful assistant." },
+              {
+                role: "user",
+                content: "Say 'Connection successful' in one sentence."
+              }
+            ],
+            max_tokens: 20
+          })
+        }
+      )
+
+      if (response.ok) {
+        setPerplexityTestStatus({
+          type: "success",
+          message: "Connection successful! Perplexity Sonar is ready."
+        })
+      } else {
+        setPerplexityTestStatus({
+          type: "error",
+          message: `Connection failed: ${response.status} ${response.statusText}`
+        })
+      }
+    } catch (error) {
+      setPerplexityTestStatus({
+        type: "error",
+        message:
+          "Connection failed. Please check your internet connection and API key."
+      })
+    }
+
+    setTimeout(
+      () => setPerplexityTestStatus({ type: "idle", message: "" }),
+      5000
+    )
+  }
+
   const handleSaveSettings = () => {
-    chrome.storage.local.set({ ollamaConfig, customPrompts, userProfile })
+    chrome.storage.local.set({
+      ollamaConfig,
+      perplexityConfig,
+      customPrompts,
+      userProfile
+    })
     setSaveStatus("Settings saved successfully!")
     setTimeout(() => setSaveStatus(""), 3000)
   }
@@ -137,22 +238,33 @@ function Options() {
     }
   }
 
-  const activeTemplateName = PROMPT_TEMPLATES.find(t =>
-    t.prompts.resumeSystemPrompt === customPrompts?.resumeSystemPrompt &&
-    t.prompts.resumeUserPromptTemplate === customPrompts?.resumeUserPromptTemplate &&
-    t.prompts.coverLetterSystemPrompt === customPrompts?.coverLetterSystemPrompt &&
-    t.prompts.coverLetterUserPromptTemplate === customPrompts?.coverLetterUserPromptTemplate
+  const activeTemplateName = PROMPT_TEMPLATES.find(
+    (t) =>
+      t.prompts.resumeSystemPrompt === customPrompts?.resumeSystemPrompt &&
+      t.prompts.resumeUserPromptTemplate ===
+        customPrompts?.resumeUserPromptTemplate &&
+      t.prompts.coverLetterSystemPrompt ===
+        customPrompts?.coverLetterSystemPrompt &&
+      t.prompts.coverLetterUserPromptTemplate ===
+        customPrompts?.coverLetterUserPromptTemplate
   )?.name
 
   const handleApplyTemplate = (template: PromptTemplate) => {
     const isCustomised = activeTemplateName === undefined
-    if (isCustomised && !confirm(`Apply "${template.name}"? This will overwrite your current custom prompts.`)) return
+    if (
+      isCustomised &&
+      !confirm(
+        `Apply "${template.name}"? This will overwrite your current custom prompts.`
+      )
+    )
+      return
     setCustomPrompts(template.prompts)
   }
 
   const handleExportData = async () => {
     try {
-      const { savedApplications } = await chrome.storage.local.get("savedApplications")
+      const { savedApplications } =
+        await chrome.storage.local.get("savedApplications")
       const data = {
         version: "1.0.0",
         exportDate: new Date().toISOString(),
@@ -210,7 +322,9 @@ function Options() {
           if (data.userProfile) setUserProfile(data.userProfile)
           if (data.llmTuning) setLlmTuning(data.llmTuning)
           if (data.savedApplications) {
-            await chrome.storage.local.set({ savedApplications: data.savedApplications })
+            await chrome.storage.local.set({
+              savedApplications: data.savedApplications
+            })
           }
 
           setSaveStatus("Data imported successfully!")
@@ -229,7 +343,10 @@ function Options() {
     try {
       const token = await authorize()
       await setSyncConfig({ token, lastSynced: null })
-      setSyncStatus({ type: "success", message: "Connected! Your data will sync automatically." })
+      setSyncStatus({
+        type: "success",
+        message: "Connected! Your data will sync automatically."
+      })
     } catch (err) {
       setSyncStatus({ type: "error", message: (err as Error).message })
     }
@@ -238,11 +355,20 @@ function Options() {
 
   const handleForcePull = async () => {
     if (!syncConfig?.token) return
-    setSyncStatus({ type: "loading", message: "Restoring from Google Drive..." })
+    setSyncStatus({
+      type: "loading",
+      message: "Restoring from Google Drive..."
+    })
     try {
       await pull(syncConfig.token)
-      await setSyncConfig({ ...syncConfig, lastSynced: new Date().toISOString() })
-      setSyncStatus({ type: "success", message: "Data restored from Google Drive!" })
+      await setSyncConfig({
+        ...syncConfig,
+        lastSynced: new Date().toISOString()
+      })
+      setSyncStatus({
+        type: "success",
+        message: "Data restored from Google Drive!"
+      })
     } catch (err) {
       setSyncStatus({ type: "error", message: (err as Error).message })
     }
@@ -251,7 +377,12 @@ function Options() {
 
   const handleDisconnectDrive = async () => {
     if (!syncConfig?.token) return
-    if (!confirm("Disconnect Google Drive? Your local data will be kept, but automatic sync will stop.")) return
+    if (
+      !confirm(
+        "Disconnect Google Drive? Your local data will be kept, but automatic sync will stop."
+      )
+    )
+      return
     setSyncStatus({ type: "loading", message: "Disconnecting..." })
     try {
       await revoke(syncConfig.token)
@@ -349,7 +480,9 @@ function Options() {
                 className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg
                          hover:bg-gray-200 transition-colors font-medium
                          disabled:opacity-50">
-                {testStatus.type === "loading" ? "Testing..." : "Test Connection"}
+                {testStatus.type === "loading"
+                  ? "Testing..."
+                  : "Test Connection"}
               </button>
             </div>
 
@@ -368,6 +501,133 @@ function Options() {
       )
     },
     {
+      label: "Perplexity",
+      value: "perplexity",
+      content: (
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Perplexity Sonar Configuration
+          </h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Configure Perplexity Sonar to research companies and display
+            information in the results. This enables the "About Company" section
+            with industry, size, projects, and ratings from Glassdoor, Indeed,
+            and Teamlyzer.
+          </p>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="perplexityEnabled"
+                checked={perplexityConfig.enabled}
+                onChange={(e) =>
+                  setPerplexityConfig({
+                    ...perplexityConfig,
+                    enabled: e.target.checked
+                  })
+                }
+                className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+              />
+              <label
+                htmlFor="perplexityEnabled"
+                className="text-sm font-medium text-gray-700">
+                Enable Company Research
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                API Key *
+              </label>
+              <input
+                type="password"
+                value={perplexityConfig.apiKey}
+                onChange={(e) =>
+                  setPerplexityConfig({
+                    ...perplexityConfig,
+                    apiKey: e.target.value
+                  })
+                }
+                placeholder="pplx-..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg
+                         focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+              <p className="mt-2 text-sm text-gray-500">
+                Get your API key from{" "}
+                <a
+                  href="https://www.perplexity.ai/settings/api"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple-600 hover:underline">
+                  perplexity.ai/settings/api
+                </a>
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Research Prompt
+              </label>
+              <textarea
+                value={perplexityConfig.customPrompt}
+                onChange={(e) =>
+                  setPerplexityConfig({
+                    ...perplexityConfig,
+                    customPrompt: e.target.value
+                  })
+                }
+                rows={6}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg
+                         focus:ring-2 focus:ring-purple-500 focus:border-transparent
+                         font-mono text-sm"
+              />
+              <p className="mt-2 text-sm text-gray-500">
+                Use {"{{companyName}}"} as a placeholder for the company name.
+                The prompt is sent to Perplexity Sonar to gather company
+                information.
+              </p>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-blue-800 mb-2">
+                Pricing
+              </h3>
+              <p className="text-xs text-blue-700">
+                Perplexity Sonar costs $1 per 1M input tokens and $1 per 1M
+                output tokens. A typical company research query costs
+                approximately $0.0008.
+              </p>
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={handleTestPerplexity}
+                disabled={perplexityTestStatus.type === "loading"}
+                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg
+                         hover:bg-gray-200 transition-colors font-medium
+                         disabled:opacity-50">
+                {perplexityTestStatus.type === "loading"
+                  ? "Testing..."
+                  : "Test Connection"}
+              </button>
+            </div>
+
+            {perplexityTestStatus.type === "success" && (
+              <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
+                {perplexityTestStatus.message}
+              </div>
+            )}
+            {perplexityTestStatus.type === "error" && (
+              <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+                {perplexityTestStatus.message}
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    },
+    {
       label: "Prompts",
       value: "prompts",
       content: (
@@ -375,9 +635,12 @@ function Options() {
           {/* ── LLM Fine-tuning ─────────────────────────────────────── */}
           <div className="bg-white rounded-xl shadow-lg p-6 w-1/3">
             <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">LLM Fine-tuning</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                LLM Fine-tuning
+              </h2>
               <p className="text-sm text-gray-500 mt-1">
-                Adjust model behaviour and document generation style. Changes apply to the next generation.
+                Adjust model behaviour and document generation style. Changes
+                apply to the next generation.
               </p>
             </div>
 
@@ -388,19 +651,30 @@ function Options() {
                   Generation Parameters
                 </h3>
                 <div className="space-y-5">
-
                   {/* Temperature */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-sm font-medium text-gray-700">Temperature</label>
+                      <label className="text-sm font-medium text-gray-700">
+                        Temperature
+                      </label>
                       <span className="text-sm font-mono font-semibold text-purple-600 w-10 text-right">
-                        {(llmTuning ?? DEFAULT_LLM_TUNING).temperature.toFixed(1)}
+                        {(llmTuning ?? DEFAULT_LLM_TUNING).temperature.toFixed(
+                          1
+                        )}
                       </span>
                     </div>
                     <input
-                      type="range" min="0.1" max="1.5" step="0.1"
+                      type="range"
+                      min="0.1"
+                      max="1.5"
+                      step="0.1"
                       value={(llmTuning ?? DEFAULT_LLM_TUNING).temperature}
-                      onChange={(e) => setLlmTuning({ ...(llmTuning ?? DEFAULT_LLM_TUNING), temperature: parseFloat(e.target.value) })}
+                      onChange={(e) =>
+                        setLlmTuning({
+                          ...(llmTuning ?? DEFAULT_LLM_TUNING),
+                          temperature: parseFloat(e.target.value)
+                        })
+                      }
                       className="w-full accent-purple-600"
                     />
                     <div className="flex justify-between text-xs text-gray-400 mt-0.5">
@@ -412,15 +686,25 @@ function Options() {
                   {/* Top P */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-sm font-medium text-gray-700">Top P</label>
+                      <label className="text-sm font-medium text-gray-700">
+                        Top P
+                      </label>
                       <span className="text-sm font-mono font-semibold text-purple-600 w-10 text-right">
                         {(llmTuning ?? DEFAULT_LLM_TUNING).topP.toFixed(2)}
                       </span>
                     </div>
                     <input
-                      type="range" min="0.5" max="1.0" step="0.05"
+                      type="range"
+                      min="0.5"
+                      max="1.0"
+                      step="0.05"
                       value={(llmTuning ?? DEFAULT_LLM_TUNING).topP}
-                      onChange={(e) => setLlmTuning({ ...(llmTuning ?? DEFAULT_LLM_TUNING), topP: parseFloat(e.target.value) })}
+                      onChange={(e) =>
+                        setLlmTuning({
+                          ...(llmTuning ?? DEFAULT_LLM_TUNING),
+                          topP: parseFloat(e.target.value)
+                        })
+                      }
                       className="w-full accent-purple-600"
                     />
                     <div className="flex justify-between text-xs text-gray-400 mt-0.5">
@@ -432,15 +716,27 @@ function Options() {
                   {/* Max Tokens */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-sm font-medium text-gray-700">Max Output Tokens</label>
+                      <label className="text-sm font-medium text-gray-700">
+                        Max Output Tokens
+                      </label>
                       <span className="text-sm font-mono font-semibold text-purple-600 w-16 text-right">
-                        {(llmTuning ?? DEFAULT_LLM_TUNING).maxTokens.toLocaleString()}
+                        {(
+                          llmTuning ?? DEFAULT_LLM_TUNING
+                        ).maxTokens.toLocaleString()}
                       </span>
                     </div>
                     <input
-                      type="range" min="1024" max="8192" step="256"
+                      type="range"
+                      min="1024"
+                      max="8192"
+                      step="256"
                       value={(llmTuning ?? DEFAULT_LLM_TUNING).maxTokens}
-                      onChange={(e) => setLlmTuning({ ...(llmTuning ?? DEFAULT_LLM_TUNING), maxTokens: parseInt(e.target.value) })}
+                      onChange={(e) =>
+                        setLlmTuning({
+                          ...(llmTuning ?? DEFAULT_LLM_TUNING),
+                          maxTokens: parseInt(e.target.value)
+                        })
+                      }
                       className="w-full accent-purple-600"
                     />
                     <div className="flex justify-between text-xs text-gray-400 mt-0.5">
@@ -459,34 +755,53 @@ function Options() {
                   Analysis &amp; Style
                 </h3>
                 <div className="space-y-5">
-
                   {/* Match Strictness */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Profile Match Strictness
                     </label>
                     <p className="text-xs text-gray-400 mb-2">
-                      How rigorously the AI scores your profile against the job requirements.
+                      How rigorously the AI scores your profile against the job
+                      requirements.
                     </p>
                     <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-sm">
-                      {(["strict", "balanced", "generous"] as const).map((opt) => (
-                        <button
-                          key={opt}
-                          onClick={() => setLlmTuning({ ...(llmTuning ?? DEFAULT_LLM_TUNING), matchStrictness: opt })}
-                          className={`px-4 py-2 font-medium capitalize transition-colors
-                            ${(llmTuning ?? DEFAULT_LLM_TUNING).matchStrictness === opt
-                              ? "bg-purple-600 text-white"
-                              : "bg-white text-gray-600 hover:bg-gray-50"}`}>
-                          {opt === "strict" ? "Strict" : opt === "balanced" ? "Balanced" : "Generous"}
-                        </button>
-                      ))}
+                      {(["strict", "balanced", "generous"] as const).map(
+                        (opt) => (
+                          <button
+                            key={opt}
+                            onClick={() =>
+                              setLlmTuning({
+                                ...(llmTuning ?? DEFAULT_LLM_TUNING),
+                                matchStrictness: opt
+                              })
+                            }
+                            className={`px-4 py-2 font-medium capitalize transition-colors
+                            ${
+                              (llmTuning ?? DEFAULT_LLM_TUNING)
+                                .matchStrictness === opt
+                                ? "bg-purple-600 text-white"
+                                : "bg-white text-gray-600 hover:bg-gray-50"
+                            }`}>
+                            {opt === "strict"
+                              ? "Strict"
+                              : opt === "balanced"
+                                ? "Balanced"
+                                : "Generous"}
+                          </button>
+                        )
+                      )}
                     </div>
                     <p className="mt-2 text-xs text-gray-400">
-                      {{
-                        strict: "Gaps and missing skills are weighted heavily. Scores tend lower.",
-                        balanced: "Fair assessment — explicit requirements and transferable skills weighed equally.",
-                        generous: "Transferable skills and potential count. Scores tend higher."
-                      }[(llmTuning ?? DEFAULT_LLM_TUNING).matchStrictness]}
+                      {
+                        {
+                          strict:
+                            "Gaps and missing skills are weighted heavily. Scores tend lower.",
+                          balanced:
+                            "Fair assessment — explicit requirements and transferable skills weighed equally.",
+                          generous:
+                            "Transferable skills and potential count. Scores tend higher."
+                        }[(llmTuning ?? DEFAULT_LLM_TUNING).matchStrictness]
+                      }
                     </p>
                   </div>
 
@@ -499,14 +814,24 @@ function Options() {
                       Applies to both resumes and cover letters.
                     </p>
                     <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-sm">
-                      {(["formal", "professional", "conversational"] as const).map((opt) => (
+                      {(
+                        ["formal", "professional", "conversational"] as const
+                      ).map((opt) => (
                         <button
                           key={opt}
-                          onClick={() => setLlmTuning({ ...(llmTuning ?? DEFAULT_LLM_TUNING), writingTone: opt })}
+                          onClick={() =>
+                            setLlmTuning({
+                              ...(llmTuning ?? DEFAULT_LLM_TUNING),
+                              writingTone: opt
+                            })
+                          }
                           className={`px-4 py-2 font-medium capitalize transition-colors
-                            ${(llmTuning ?? DEFAULT_LLM_TUNING).writingTone === opt
-                              ? "bg-purple-600 text-white"
-                              : "bg-white text-gray-600 hover:bg-gray-50"}`}>
+                            ${
+                              (llmTuning ?? DEFAULT_LLM_TUNING).writingTone ===
+                              opt
+                                ? "bg-purple-600 text-white"
+                                : "bg-white text-gray-600 hover:bg-gray-50"
+                            }`}>
                           {opt.charAt(0).toUpperCase() + opt.slice(1)}
                         </button>
                       ))}
@@ -522,17 +847,31 @@ function Options() {
                       Which section the model leads with and emphasises most.
                     </p>
                     <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-sm">
-                      {(["skills", "balanced", "experience"] as const).map((opt) => (
-                        <button
-                          key={opt}
-                          onClick={() => setLlmTuning({ ...(llmTuning ?? DEFAULT_LLM_TUNING), resumeFocus: opt })}
-                          className={`px-4 py-2 font-medium transition-colors
-                            ${(llmTuning ?? DEFAULT_LLM_TUNING).resumeFocus === opt
-                              ? "bg-purple-600 text-white"
-                              : "bg-white text-gray-600 hover:bg-gray-50"}`}>
-                          {opt === "skills" ? "Skills-first" : opt === "balanced" ? "Balanced" : "Experience-first"}
-                        </button>
-                      ))}
+                      {(["skills", "balanced", "experience"] as const).map(
+                        (opt) => (
+                          <button
+                            key={opt}
+                            onClick={() =>
+                              setLlmTuning({
+                                ...(llmTuning ?? DEFAULT_LLM_TUNING),
+                                resumeFocus: opt
+                              })
+                            }
+                            className={`px-4 py-2 font-medium transition-colors
+                            ${
+                              (llmTuning ?? DEFAULT_LLM_TUNING).resumeFocus ===
+                              opt
+                                ? "bg-purple-600 text-white"
+                                : "bg-white text-gray-600 hover:bg-gray-50"
+                            }`}>
+                            {opt === "skills"
+                              ? "Skills-first"
+                              : opt === "balanced"
+                                ? "Balanced"
+                                : "Experience-first"}
+                          </button>
+                        )
+                      )}
                     </div>
                   </div>
                 </div>
@@ -553,7 +892,9 @@ function Options() {
           <div className="bg-white rounded-xl shadow-lg p-6 w-2/3">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">Custom Prompts</h2>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Custom Prompts
+                </h2>
                 <p className="text-sm text-gray-500 mt-1">
                   Override the system and user prompts sent to the model.
                 </p>
@@ -577,7 +918,7 @@ function Options() {
                   {
                     key: "resumeUserPromptTemplate" as keyof CustomPrompts,
                     label: "Resume User Prompt Template",
-                    hint: 'Use {{companyName}}, {{jobTitle}}, {{jobDescription}}, and {{userProfile}} as placeholders.'
+                    hint: "Use {{companyName}}, {{jobTitle}}, {{jobDescription}}, and {{userProfile}} as placeholders."
                   },
                   {
                     key: "coverLetterSystemPrompt" as keyof CustomPrompts,
@@ -587,7 +928,7 @@ function Options() {
                   {
                     key: "coverLetterUserPromptTemplate" as keyof CustomPrompts,
                     label: "Cover Letter User Prompt Template",
-                    hint: 'Use {{companyName}}, {{jobTitle}}, {{jobDescription}}, and {{userProfile}} as placeholders.'
+                    hint: "Use {{companyName}}, {{jobTitle}}, {{jobDescription}}, and {{userProfile}} as placeholders."
                   }
                 ] as const
               ).map(({ key, label, hint }) => (
@@ -625,9 +966,12 @@ function Options() {
       content: (
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Prompt Templates</h2>
+            <h2 className="text-xl font-semibold text-gray-900">
+              Prompt Templates
+            </h2>
             <p className="text-sm text-gray-500 mt-1">
-              Apply a preset to instantly configure your Custom Prompts for a specific role type.
+              Apply a preset to instantly configure your Custom Prompts for a
+              specific role type.
             </p>
           </div>
 
@@ -635,17 +979,22 @@ function Options() {
             {PROMPT_TEMPLATES.map((template) => {
               const isActive = activeTemplateName === template.name
               return (
-                <div key={template.id}
+                <div
+                  key={template.id}
                   className={`flex flex-col rounded-xl border-2 p-5 transition-all
-                    ${isActive
-                      ? "border-purple-400 bg-purple-50"
-                      : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"}`}>
-
+                    ${
+                      isActive
+                        ? "border-purple-400 bg-purple-50"
+                        : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
+                    }`}>
                   {/* Header */}
                   <div className="flex items-start justify-between mb-3">
-                    <h3 className="font-semibold text-gray-900 text-sm">{template.name}</h3>
+                    <h3 className="font-semibold text-gray-900 text-sm">
+                      {template.name}
+                    </h3>
                     {isActive && (
-                      <span className="text-xs font-medium bg-emerald-100 text-emerald-700
+                      <span
+                        className="text-xs font-medium bg-emerald-100 text-emerald-700
                                        border border-emerald-200 rounded-full px-2 py-0.5 shrink-0 ml-2">
                         Active
                       </span>
@@ -653,13 +1002,19 @@ function Options() {
                   </div>
 
                   {/* Tag line */}
-                  <p className="text-xs text-gray-500 mb-4">{template.tagLine}</p>
+                  <p className="text-xs text-gray-500 mb-4">
+                    {template.tagLine}
+                  </p>
 
                   {/* Bullets */}
                   <ul className="space-y-1.5 flex-1 mb-5">
-                    {template.bullets.map(b => (
-                      <li key={b} className="flex items-start gap-2 text-xs text-gray-600">
-                        <span className="text-purple-400 mt-0.5 shrink-0">•</span>
+                    {template.bullets.map((b) => (
+                      <li
+                        key={b}
+                        className="flex items-start gap-2 text-xs text-gray-600">
+                        <span className="text-purple-400 mt-0.5 shrink-0">
+                          •
+                        </span>
                         {b}
                       </li>
                     ))}
@@ -670,9 +1025,11 @@ function Options() {
                     onClick={() => handleApplyTemplate(template)}
                     disabled={isActive}
                     className={`w-full py-2 rounded-lg text-sm font-medium transition-colors
-                      ${isActive
-                        ? "bg-gray-100 text-gray-400 cursor-default"
-                        : "bg-purple-600 text-white hover:bg-purple-700"}`}>
+                      ${
+                        isActive
+                          ? "bg-gray-100 text-gray-400 cursor-default"
+                          : "bg-purple-600 text-white hover:bg-purple-700"
+                      }`}>
                     {isActive ? "Applied" : "Apply Template"}
                   </button>
                 </div>
@@ -721,7 +1078,8 @@ function Options() {
               Certificates
             </h2>
             <p className="text-sm text-gray-500 mb-4">
-              Certifications, online courses, bootcamps and professional training.
+              Certifications, online courses, bootcamps and professional
+              training.
             </p>
             <CertificateEditor
               certificates={userProfile.certificates ?? []}
@@ -807,10 +1165,13 @@ function Options() {
           {/* Google Drive Sync */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Google Drive Sync</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Google Drive Sync
+              </h2>
               <p className="text-sm text-gray-500 mt-1">
-                Sync your profile, settings, and saved applications across computers. Data is stored
-                privately in your Google Drive app folder — only JobTailor can access it.
+                Sync your profile, settings, and saved applications across
+                computers. Data is stored privately in your Google Drive app
+                folder — only JobTailor can access it.
               </p>
             </div>
 
@@ -821,8 +1182,13 @@ function Options() {
                   <ul className="list-disc list-inside space-y-1 text-blue-700">
                     <li>Connect once per device with your Google account</li>
                     <li>Changes sync automatically after 2 seconds</li>
-                    <li>On a new device, connect and use Force Pull to restore</li>
-                    <li>Your data is stored in a private app folder, not visible in Drive</li>
+                    <li>
+                      On a new device, connect and use Force Pull to restore
+                    </li>
+                    <li>
+                      Your data is stored in a private app folder, not visible
+                      in Drive
+                    </li>
                   </ul>
                 </div>
                 <div>
@@ -831,7 +1197,9 @@ function Options() {
                     disabled={syncStatus.type === "loading"}
                     className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700
                              transition-colors font-medium disabled:opacity-50 flex items-center gap-2">
-                    {syncStatus.type === "loading" ? "Connecting..." : "Connect Google Drive"}
+                    {syncStatus.type === "loading"
+                      ? "Connecting..."
+                      : "Connect Google Drive"}
                   </button>
                 </div>
               </div>
@@ -840,11 +1208,14 @@ function Options() {
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-2 h-2 rounded-full bg-green-500" />
-                    <span className="text-sm font-medium text-green-800">Connected</span>
+                    <span className="text-sm font-medium text-green-800">
+                      Connected
+                    </span>
                   </div>
                   {syncConfig.lastSynced && (
                     <p className="text-xs text-green-700">
-                      Last synced: {new Date(syncConfig.lastSynced).toLocaleString()}
+                      Last synced:{" "}
+                      {new Date(syncConfig.lastSynced).toLocaleString()}
                     </p>
                   )}
                   {!syncConfig.lastSynced && (
@@ -865,7 +1236,9 @@ function Options() {
                     disabled={syncStatus.type === "loading"}
                     className="px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700
                              transition-colors font-medium text-sm disabled:opacity-50">
-                    {syncStatus.type === "loading" ? "Restoring..." : "Force Pull from Drive"}
+                    {syncStatus.type === "loading"
+                      ? "Restoring..."
+                      : "Force Pull from Drive"}
                   </button>
                   <button
                     onClick={handleDisconnectDrive}
@@ -893,10 +1266,13 @@ function Options() {
           {/* Manual Export/Import */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Manual Export / Import</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Manual Export / Import
+              </h2>
               <p className="text-sm text-gray-500 mt-1">
-                Download a full backup or restore from a previously exported file. Includes profile,
-                settings, and all saved applications with generated CVs and cover letters.
+                Download a full backup or restore from a previously exported
+                file. Includes profile, settings, and all saved applications
+                with generated CVs and cover letters.
               </p>
             </div>
             <div className="flex gap-3">
@@ -958,7 +1334,9 @@ function Options() {
       <PromptDialog
         isOpen={dialogState.isOpen}
         title={dialogState.title}
-        prompt={dialogState.promptKey ? customPrompts[dialogState.promptKey] : ""}
+        prompt={
+          dialogState.promptKey ? customPrompts[dialogState.promptKey] : ""
+        }
         onClose={closePromptDialog}
         onSave={savePromptFromDialog}
       />

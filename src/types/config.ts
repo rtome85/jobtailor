@@ -6,6 +6,21 @@ export interface OllamaConfig {
   enabled: boolean
 }
 
+export interface PerplexityConfig {
+  apiKey: string
+  enabled: boolean
+  customPrompt: string
+}
+
+export const DEFAULT_PERPLEXITY_PROMPT = `Research the company {{companyName}}. Provide the following information in a structured format:
+- Industry/Sector
+- Company size (employees)
+- Notable projects, products, or services
+- Ratings on Glassdoor, Indeed, Teamlyzer (if available)
+- Brief description (2-3 sentences)
+
+Format as concise bullet points. If information is not available, state "Not available".`
+
 export interface ModelConfig {
   id: string
   name: string
