@@ -33,11 +33,6 @@ function IndexPopup() {
         return
       }
 
-      // Inject content script if not already present
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ["contents/jobScrapper.js"]
-      })
 
       await new Promise((resolve) => setTimeout(resolve, 500))
 
