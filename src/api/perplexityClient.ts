@@ -221,41 +221,10 @@ export class PerplexityClient {
     jobDescription: string,
     interviewType: string
   ): string {
-    return `Create a focused technical interview preparation guide for a ${interviewType} for the ${jobTitle} position at ${companyName}.
-
-Job description for context:
-${jobDescription || "Not available"}
-
-Generate a technical preparation document in Markdown format with the following structure:
-
-# Technical Interview Preparation - ${jobTitle}
-
-## 1. Key Technologies & Skills
-List the main technologies, frameworks, and tools mentioned in the job description that will likely be covered in the interview. Include expected proficiency levels.
-
-## 2. Technical Questions
-Prepare 8-12 specific technical questions covering:
-- Core programming concepts relevant to the role
-- Framework-specific questions (based on technologies in the job description)
-- System design and architecture (for senior roles)
-- Database and data structure questions
-- Problem-solving scenarios with expected solution approaches
-- Code review and debugging scenarios
-
-For each question, provide:
-- The question itself
-- Key points the interviewer expects in the answer
-- Example answer outline or code snippet where applicable
-
-## 3. Coding Challenges
-List 3-5 practical coding problems or algorithms commonly asked for this type of role, including:
-- Problem statement
-- Expected time/space complexity
-- Hints for approaching the solution
-
-## 4. Technical Deep Dive Topics
-Identify 2-3 advanced topics specific to ${companyName}'s tech stack or industry that might be discussed. Provide key concepts to review.
-
-IMPORTANT: Respond ONLY with the Markdown content. No introductory text, no explanations outside the document. Focus strictly on technical preparation content.`
+    return this.config.preparationPlanPrompt
+      .replace(/\{\{companyName\}\}/g, companyName)
+      .replace(/\{\{jobTitle\}\}/g, jobTitle)
+      .replace(/\{\{jobDescription\}\}/g, jobDescription || "Not available")
+      .replace(/\{\{interviewType\}\}/g, interviewType)
   }
 }
