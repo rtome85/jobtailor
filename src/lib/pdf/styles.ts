@@ -17,26 +17,24 @@ export const CV_STYLES = {
   // pdfmake will automatically use Roboto-Medium.ttf when bold: true
   h1: {
     font: "Roboto",
-    fontSize: 22,
-    alignment: "center",
-    margin: [0, 0, 0, 8],
+    fontSize: 26,
+    alignment: "left",
+    margin: [0, 0, 0, 0],
     bold: true
   },
 
   h2: {
     font: "Roboto",
-    fontSize: 14,
-    margin: [0, 16, 0, 6],
+    fontSize: 16,
+    margin: [0, 6, 0, 6],
     bold: true,
-    color: "#000000",
-    decoration: "underline",
-    decorationStyle: "solid"
+    color: "#000000"
   },
 
   h3: {
     font: "Roboto",
     fontSize: 11,
-    margin: [0, 10, 0, 3],
+    margin: [0, 6, 0, 3],
     bold: true
   },
 
@@ -82,7 +80,7 @@ export const CV_STYLES = {
 
   // Horizontal rule (implemented as canvas line)
   hr: {
-    margin: [0, 12, 0, 12]
+    margin: [0, 0, 0, 0]
   }
 }
 

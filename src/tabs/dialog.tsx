@@ -710,10 +710,10 @@ function IndexDialog() {
               </span>
               <span
                 className={`text-2xl font-bold ${pct >= 70
-                    ? "text-green-600"
-                    : pct >= 50
-                      ? "text-yellow-600"
-                      : "text-red-600"
+                  ? "text-green-600"
+                  : pct >= 50
+                    ? "text-yellow-600"
+                    : "text-red-600"
                   }`}>
                 {pct}%
               </span>
@@ -912,10 +912,10 @@ function IndexDialog() {
           )}
 
           {/* Download buttons */}
-          <div className="space-y-3">
+          <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 space-y-3">
             {/* Resume Download */}
-            <div>
-              <p className="text-xs text-gray-500 mb-1.5 text-center">
+            <div className="flex flex-row gap-2 items-center justify-between">
+              <p className="text-lg font-semibold uppercase tracking-widest text-slate-500 mb-2">
                 Download Resume
               </p>
               <div className="flex gap-2">
@@ -926,10 +926,12 @@ function IndexDialog() {
                       result.resumeContent
                     )
                   }
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5
-                             bg-white border border-purple-200 text-purple-700
-                             rounded-lg hover:bg-purple-50 transition-colors text-sm font-medium">
-                  <FileText size={14} />
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
+                             bg-white border border-slate-200 text-slate-500 rounded-lg
+                             hover:bg-slate-50 hover:border-slate-300 hover:text-slate-700
+                             active:scale-[0.97] transition-all text-xs font-medium
+                             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
+                  <FileText size={13} />
                   <span>MD</span>
                 </button>
                 <button
@@ -944,18 +946,22 @@ function IndexDialog() {
                       alert("Failed to generate PDF. Please try again.")
                     }
                   }}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5
-                             bg-gradient-to-r from-purple-500 to-purple-600
-                             text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium">
-                  <Download size={14} />
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
+                             bg-violet-600 text-white rounded-lg shadow-sm
+                             hover:bg-violet-700 active:scale-[0.97]
+                             transition-all text-xs font-medium
+                             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
+                  <Download size={13} />
                   <span>PDF</span>
                 </button>
               </div>
             </div>
 
+            <div className="border-t border-slate-100" />
+
             {/* Cover Letter Download */}
-            <div>
-              <p className="text-xs text-gray-500 mb-1.5 text-center">
+            <div className="flex flex-row gap-2 items-center justify-between">
+              <p className="text-lg font-semibold uppercase tracking-widest text-slate-500 mb-2">
                 Download Cover Letter
               </p>
               <div className="flex gap-2">
@@ -966,10 +972,12 @@ function IndexDialog() {
                       result.coverLetterContent
                     )
                   }
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5
-                             bg-white border border-indigo-200 text-indigo-700
-                             rounded-lg hover:bg-indigo-50 transition-colors text-sm font-medium">
-                  <FileText size={14} />
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
+                             bg-white border border-slate-200 text-slate-500 rounded-lg
+                             hover:bg-slate-50 hover:border-slate-300 hover:text-slate-700
+                             active:scale-[0.97] transition-all text-xs font-medium
+                             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40">
+                  <FileText size={13} />
                   <span>MD</span>
                 </button>
                 <button
@@ -984,31 +992,35 @@ function IndexDialog() {
                       alert("Failed to generate PDF. Please try again.")
                     }
                   }}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5
-                             bg-gradient-to-r from-indigo-500 to-indigo-600
-                             text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium">
-                  <Download size={14} />
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
+                             bg-indigo-600 text-white rounded-lg shadow-sm
+                             hover:bg-indigo-700 active:scale-[0.97]
+                             transition-all text-xs font-medium
+                             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40">
+                  <Download size={13} />
                   <span>PDF</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <button
-            onClick={() => openSaveForm("success")}
-            className="w-full mt-3 px-4 py-3 text-sm font-medium
+          <div className="flex flex-row gap-2 items-center justify-between">
+            <button
+              onClick={() => openSaveForm("success")}
+              className="w-full mt-3 px-4 py-3 text-sm font-medium
                        bg-gradient-to-r from-emerald-500 to-emerald-600
                        text-white rounded-lg hover:opacity-90 transition-opacity">
-            Save Application
-          </button>
+              Save Application
+            </button>
 
-          <button
-            onClick={() => setView("applicationsList")}
-            className="w-full mt-2 px-4 py-2 text-sm text-gray-500
+            <button
+              onClick={() => setView("applicationsList")}
+              className="w-full mt-2 px-4 py-2 text-sm text-gray-500
                        border border-gray-200 rounded-lg hover:bg-gray-50
                        transition-colors">
-            View Saved Applications
-          </button>
+              View Saved Applications
+            </button>
+          </div>
 
           <button
             onClick={() => window.close()}
@@ -1316,7 +1328,9 @@ function IndexDialog() {
                     {viewingApplication.resumeContent &&
                       viewingApplication.resumeFilename && (
                         <div>
-                          <p className="text-xs text-gray-400 mb-1">CV</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5">
+                            Resume
+                          </p>
                           <div className="flex gap-2">
                             <button
                               onClick={() =>
@@ -1326,8 +1340,10 @@ function IndexDialog() {
                                 )
                               }
                               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
-                                       bg-white border border-purple-200 text-purple-700
-                                       rounded-lg hover:bg-purple-50 transition-colors text-xs font-medium">
+                                       bg-white border border-slate-200 text-slate-500 rounded-lg
+                                       hover:bg-slate-50 hover:border-slate-300 hover:text-slate-700
+                                       active:scale-[0.97] transition-all text-xs font-medium
+                                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
                               <FileText size={12} />
                               <span>MD</span>
                             </button>
@@ -1346,8 +1362,10 @@ function IndexDialog() {
                                 }
                               }}
                               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
-                                       bg-gradient-to-r from-purple-500 to-purple-600
-                                       text-white rounded-lg hover:opacity-90 transition-opacity text-xs font-medium">
+                                       bg-violet-600 text-white rounded-lg shadow-sm
+                                       hover:bg-violet-700 active:scale-[0.97]
+                                       transition-all text-xs font-medium
+                                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
                               <Download size={12} />
                               <span>PDF</span>
                             </button>
@@ -1359,7 +1377,7 @@ function IndexDialog() {
                     {viewingApplication.coverLetterContent &&
                       viewingApplication.coverLetterFilename && (
                         <div>
-                          <p className="text-xs text-gray-400 mb-1">
+                          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5">
                             Cover Letter
                           </p>
                           <div className="flex gap-2">
@@ -1371,8 +1389,10 @@ function IndexDialog() {
                                 )
                               }
                               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
-                                       bg-white border border-indigo-200 text-indigo-700
-                                       rounded-lg hover:bg-indigo-50 transition-colors text-xs font-medium">
+                                       bg-white border border-slate-200 text-slate-500 rounded-lg
+                                       hover:bg-slate-50 hover:border-slate-300 hover:text-slate-700
+                                       active:scale-[0.97] transition-all text-xs font-medium
+                                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40">
                               <FileText size={12} />
                               <span>MD</span>
                             </button>
@@ -1391,8 +1411,10 @@ function IndexDialog() {
                                 }
                               }}
                               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
-                                       bg-gradient-to-r from-indigo-500 to-indigo-600
-                                       text-white rounded-lg hover:opacity-90 transition-opacity text-xs font-medium">
+                                       bg-indigo-600 text-white rounded-lg shadow-sm
+                                       hover:bg-indigo-700 active:scale-[0.97]
+                                       transition-all text-xs font-medium
+                                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40">
                               <Download size={12} />
                               <span>PDF</span>
                             </button>
@@ -1540,10 +1562,10 @@ function IndexDialog() {
                         {app.matchPercentage != null ? (
                           <span
                             className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${app.matchPercentage >= 70
-                                ? "bg-green-100 text-green-800"
-                                : app.matchPercentage >= 50
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
+                              ? "bg-green-100 text-green-800"
+                              : app.matchPercentage >= 50
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
                               }`}>
                             {app.matchPercentage}%
                           </span>
@@ -1696,10 +1718,10 @@ function IndexDialog() {
         {status && (
           <p
             className={`mt-3 text-sm ${status.includes("failed") ||
-                status.includes("error") ||
-                status.includes("Error")
-                ? "text-red-600"
-                : "text-purple-600"
+              status.includes("error") ||
+              status.includes("Error")
+              ? "text-red-600"
+              : "text-purple-600"
               }`}>
             {status}
           </p>

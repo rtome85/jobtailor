@@ -1,6 +1,39 @@
 import type { Token, Tokens } from "marked"
 
 /**
+ * Normaliza texto para compatibilidade com PDF
+ * Substitui caracteres especiais que podem causar problemas de encoding
+ */
+function normalizeText(text: string): string {
+  if (!text) return ""
+
+  // Usar regex para substituir caracteres problemáticos
+  return text
+    .replace(/&/g, "&") // Ampersand
+    .replace(/</g, "<") // Less than
+    .replace(/>/g, ">") // Greater than
+    .replace(/"/g, '"') // Quote
+    .replace(/'/g, "'") // Apostrophe
+    .replace(/©/g, "(c)") // Copyright
+    .replace(/®/g, "(R)") // Registered
+    .replace(/™/g, "(TM)") // Trademark
+    .replace(/–/g, "-") // En dash
+    .replace(/—/g, "-") // Em dash
+    .replace(/"/g, '"') // Smart quote left
+    .replace(/"/g, '"') // Smart quote right
+    .replace(/'/g, "'") // Smart apostrophe
+    .replace(/…/g, "...") // Ellipsis
+    // Unicode spaces not supported by embedded Roboto font
+    .replace(/[\u00A0\u202F\u2009\u2007\u2008\u205F\u3000]/g, " ") // Various non-breaking/special spaces → regular space
+    .replace(/[\u200B\u200C\u200D\uFEFF]/g, "") // Zero-width characters → remove
+    // Other common Unicode that LLMs generate
+    .replace(/\u2022/g, "-") // Bullet → dash
+    .replace(/\u2018/g, "'") // Left single quotation mark
+    .replace(/\u2019/g, "'") // Right single quotation mark
+    .replace(/[\u2000-\u200A]/g, " ") // Various Unicode spaces → regular space
+}
+
+/**
  * Maps Marked AST tokens to pdfmake Content elements
  */
 
@@ -62,10 +95,14 @@ function mapToken(token: Token): PdfContent {
 
     case "list": {
       const listToken = token as Tokens.List
-      const items = listToken.items.map((item) => ({
-        text: mapInlineTokens(item.tokens),
-        style: "listItem"
-      }))
+      const items = listToken.items.map((item) => {
+        // Process inline tokens for list items
+        const inlineContent = mapInlineTokens(item.tokens)
+        return {
+          text: inlineContent,
+          style: "listItem"
+        }
+      })
 
       if (listToken.ordered) {
         return {
@@ -105,7 +142,7 @@ function mapToken(token: Token): PdfContent {
       // For any unknown token, try to extract text
       if ("text" in token && typeof token.text === "string") {
         return {
-          text: token.text,
+          text: normalizeText(token.text),
           style: "paragraph"
         }
       }
@@ -125,7 +162,13 @@ function mapInlineTokens(tokens: Token[] | undefined): PdfContent[] {
     switch (token.type) {
       case "text": {
         const textToken = token as Tokens.Text
-        return textToken.text || ""
+        // Se o token de texto tiver tokens nested (ex: strong dentro de texto), processar recursivamente
+        if (textToken.tokens && textToken.tokens.length > 0) {
+          return {
+            text: mapInlineTokens(textToken.tokens)
+          }
+        }
+        return normalizeText(textToken.text) || ""
       }
 
       case "strong": {
@@ -158,7 +201,7 @@ function mapInlineTokens(tokens: Token[] | undefined): PdfContent[] {
       case "codespan": {
         const codeToken = token as Tokens.Codespan
         return {
-          text: codeToken.text,
+          text: normalizeText(codeToken.text),
           font: "Roboto",
           fontSize: 9,
           background: "#f5f5f5"
@@ -178,7 +221,7 @@ function mapInlineTokens(tokens: Token[] | undefined): PdfContent[] {
         }
         // Fallback to text property
         if ("text" in token && typeof token.text === "string") {
-          return token.text
+          return normalizeText(token.text)
         }
         return ""
     }
