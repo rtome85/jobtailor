@@ -19,6 +19,7 @@ import { sendToBackground } from "@plasmohq/messaging"
 
 import type { CompanyInfo } from "~api/perplexityClient"
 import { PreparationPlanModal } from "~components/PreparationPlanModal"
+import { downloadMarkdownAsPdf } from "~lib/pdf"
 import { AVAILABLE_MODELS } from "~types/config"
 import type { PerplexityConfig } from "~types/config"
 import {
@@ -400,25 +401,25 @@ function IndexDialog() {
             ratings: {
               glassdoor: cleanRating(
                 ratingsObj.glassdoor ??
-                  getField(
-                    raw,
-                    "glassdoor",
-                    "Glassdoor Rating",
-                    "glassdoor_rating"
-                  )
+                getField(
+                  raw,
+                  "glassdoor",
+                  "Glassdoor Rating",
+                  "glassdoor_rating"
+                )
               ),
               indeed: cleanRating(
                 ratingsObj.indeed ??
-                  getField(raw, "indeed", "Indeed Rating", "indeed_rating")
+                getField(raw, "indeed", "Indeed Rating", "indeed_rating")
               ),
               teamlyzer: cleanRating(
                 ratingsObj.teamlyzer ??
-                  getField(
-                    raw,
-                    "teamlyzer",
-                    "Teamlyzer Rating",
-                    "Overall Teamlyzer Rating"
-                  )
+                getField(
+                  raw,
+                  "teamlyzer",
+                  "Teamlyzer Rating",
+                  "Overall Teamlyzer Rating"
+                )
               )
             },
             sources: []
@@ -522,11 +523,11 @@ function IndexDialog() {
     const docs =
       !editingApplication && result && saveDocs
         ? {
-            resumeContent: result.resumeContent,
-            resumeFilename: result.resumeFilename,
-            coverLetterContent: result.coverLetterContent,
-            coverLetterFilename: result.coverLetterFilename
-          }
+          resumeContent: result.resumeContent,
+          resumeFilename: result.resumeFilename,
+          coverLetterContent: result.coverLetterContent,
+          coverLetterFilename: result.coverLetterFilename
+        }
         : {}
 
     const matchData =
@@ -536,27 +537,27 @@ function IndexDialog() {
 
     const updated: SavedApplication[] = editingApplication
       ? savedApplications.map((a) =>
-          a.id === editingApplication.id
-            ? {
-                ...a,
-                ...saveFormData,
-                jobUrl: saveFormData.jobUrl || undefined,
-                // Preserve existing preparation plan
-                preparationPlan: a.preparationPlan
-              }
-            : a
-        )
-      : [
-          ...savedApplications,
-          {
+        a.id === editingApplication.id
+          ? {
+            ...a,
             ...saveFormData,
             jobUrl: saveFormData.jobUrl || undefined,
-            ...docs,
-            ...matchData,
-            id: crypto.randomUUID(),
-            createdAt: new Date().toISOString()
+            // Preserve existing preparation plan
+            preparationPlan: a.preparationPlan
           }
-        ]
+          : a
+      )
+      : [
+        ...savedApplications,
+        {
+          ...saveFormData,
+          jobUrl: saveFormData.jobUrl || undefined,
+          ...docs,
+          ...matchData,
+          id: crypto.randomUUID(),
+          createdAt: new Date().toISOString()
+        }
+      ]
     chrome.storage.local.set({ savedApplications: updated })
     setSavedApplications(updated)
     setView("applicationsList")
@@ -629,16 +630,16 @@ function IndexDialog() {
     const updated: SavedApplication[] = savedApplications.map((a) =>
       a.id === editingApplication.id
         ? {
-            ...a,
-            preparationPlan: {
-              content: preparationPlanContent,
-              generatedAt: new Date().toISOString(),
-              interviewType: saveFormData.status as
-                | "HR Interview"
-                | "1st Technical Interview"
-                | "2nd Technical Interview"
-            }
+          ...a,
+          preparationPlan: {
+            content: preparationPlanContent,
+            generatedAt: new Date().toISOString(),
+            interviewType: saveFormData.status as
+              | "HR Interview"
+              | "1st Technical Interview"
+              | "2nd Technical Interview"
           }
+        }
         : a
     )
 
@@ -708,13 +709,12 @@ function IndexDialog() {
                 Match Score
               </span>
               <span
-                className={`text-2xl font-bold ${
-                  pct >= 70
-                    ? "text-green-600"
-                    : pct >= 50
-                      ? "text-yellow-600"
-                      : "text-red-600"
-                }`}>
+                className={`text-2xl font-bold ${pct >= 70
+                  ? "text-green-600"
+                  : pct >= 50
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                  }`}>
                 {pct}%
               </span>
             </div>
@@ -734,40 +734,40 @@ function IndexDialog() {
           {/* Strengths / Weaknesses / Improvements */}
           {((result.match.strengths?.length ?? 0) > 0 ||
             (result.match.weaknesses?.length ?? 0) > 0) && (
-            <div className=" mb-5 flex flex-row gap-2">
-              {(result.match.strengths?.length ?? 0) > 0 && (
-                <div className="flex-1 bg-green-50 border border-green-100 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">
-                    Strengths
-                  </p>
-                  <ul className="space-y-1">
-                    {result.match.strengths.map((s, i) => (
-                      <li key={i} className="flex gap-2 text-xs text-green-800">
-                        <span className="mt-0.5 shrink-0">✓</span>
-                        <span>{s}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <div className=" mb-5 flex flex-row gap-2">
+                {(result.match.strengths?.length ?? 0) > 0 && (
+                  <div className="flex-1 bg-green-50 border border-green-100 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">
+                      Strengths
+                    </p>
+                    <ul className="space-y-1">
+                      {result.match.strengths.map((s, i) => (
+                        <li key={i} className="flex gap-2 text-xs text-green-800">
+                          <span className="mt-0.5 shrink-0">✓</span>
+                          <span>{s}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-              {(result.match.weaknesses?.length ?? 0) > 0 && (
-                <div className="flex-1 bg-red-50 border border-red-100 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-2">
-                    Weaknesses
-                  </p>
-                  <ul className="space-y-1">
-                    {result.match.weaknesses.map((w, i) => (
-                      <li key={i} className="flex gap-2 text-xs text-red-800">
-                        <span className="mt-0.5 shrink-0">✗</span>
-                        <span>{w}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
+                {(result.match.weaknesses?.length ?? 0) > 0 && (
+                  <div className="flex-1 bg-red-50 border border-red-100 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-2">
+                      Weaknesses
+                    </p>
+                    <ul className="space-y-1">
+                      {result.match.weaknesses.map((w, i) => (
+                        <li key={i} className="flex gap-2 text-xs text-red-800">
+                          <span className="mt-0.5 shrink-0">✗</span>
+                          <span>{w}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
 
           {(result.match.improvements?.length ?? 0) > 0 && (
             <div className="mb-5">
@@ -863,48 +863,48 @@ function IndexDialog() {
                     {(companyInfo.ratings.glassdoor ||
                       companyInfo.ratings.indeed ||
                       companyInfo.ratings.teamlyzer) && (
-                      <div className="flex flex-wrap gap-2">
-                        {companyInfo.ratings.glassdoor && (
-                          <span className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded text-xs font-medium">
-                            <span className="text-gray-500">Glassdoor</span>
-                            <span
-                              className={
-                                companyInfo.ratings.glassdoor >= 3.5
-                                  ? "text-green-600"
-                                  : "text-red-600"
-                              }>
-                              {companyInfo.ratings.glassdoor}★
+                        <div className="flex flex-wrap gap-2">
+                          {companyInfo.ratings.glassdoor && (
+                            <span className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded text-xs font-medium">
+                              <span className="text-gray-500">Glassdoor</span>
+                              <span
+                                className={
+                                  companyInfo.ratings.glassdoor >= 3.5
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                }>
+                                {companyInfo.ratings.glassdoor}★
+                              </span>
                             </span>
-                          </span>
-                        )}
-                        {companyInfo.ratings.indeed && (
-                          <span className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded text-xs font-medium">
-                            <span className="text-gray-500">Indeed</span>
-                            <span
-                              className={
-                                companyInfo.ratings.indeed >= 3.5
-                                  ? "text-green-600"
-                                  : "text-red-600"
-                              }>
-                              {companyInfo.ratings.indeed}★
+                          )}
+                          {companyInfo.ratings.indeed && (
+                            <span className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded text-xs font-medium">
+                              <span className="text-gray-500">Indeed</span>
+                              <span
+                                className={
+                                  companyInfo.ratings.indeed >= 3.5
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                }>
+                                {companyInfo.ratings.indeed}★
+                              </span>
                             </span>
-                          </span>
-                        )}
-                        {companyInfo.ratings.teamlyzer && (
-                          <span className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded text-xs font-medium">
-                            <span className="text-gray-500">Teamlyzer</span>
-                            <span
-                              className={
-                                companyInfo.ratings.teamlyzer >= 3.5
-                                  ? "text-green-600"
-                                  : "text-red-600"
-                              }>
-                              {companyInfo.ratings.teamlyzer}★
+                          )}
+                          {companyInfo.ratings.teamlyzer && (
+                            <span className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded text-xs font-medium">
+                              <span className="text-gray-500">Teamlyzer</span>
+                              <span
+                                className={
+                                  companyInfo.ratings.teamlyzer >= 3.5
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                }>
+                                {companyInfo.ratings.teamlyzer}★
+                              </span>
                             </span>
-                          </span>
-                        )}
-                      </div>
-                    )}
+                          )}
+                        </div>
+                      )}
                   </div>
                 )
               )}
@@ -912,51 +912,115 @@ function IndexDialog() {
           )}
 
           {/* Download buttons */}
-          <div className="space-y-3">
-            <button
-              onClick={() =>
-                downloadMarkdownFile(
-                  result.resumeFilename,
-                  result.resumeContent
-                )
-              }
-              className="w-full flex items-center justify-center gap-2 px-4 py-3
-                         bg-gradient-to-r from-purple-500 to-purple-600
-                         text-white rounded-lg hover:opacity-90 transition-opacity font-medium">
-              <span>↓</span>
-              <span>Download Resume</span>
-            </button>
+          <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 space-y-3">
+            {/* Resume Download */}
+            <div className="flex flex-row gap-2 items-center justify-between">
+              <p className="text-lg font-semibold uppercase tracking-widest text-slate-500 mb-2">
+                Download Resume
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() =>
+                    downloadMarkdownFile(
+                      result.resumeFilename,
+                      result.resumeContent
+                    )
+                  }
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
+                             bg-white border border-slate-200 text-slate-500 rounded-lg
+                             hover:bg-slate-50 hover:border-slate-300 hover:text-slate-700
+                             active:scale-[0.97] transition-all text-xs font-medium
+                             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
+                  <FileText size={13} />
+                  <span>MD</span>
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await downloadMarkdownAsPdf(
+                        result.resumeContent,
+                        result.resumeFilename
+                      )
+                    } catch (error) {
+                      console.error("PDF export failed:", error)
+                      alert("Failed to generate PDF. Please try again.")
+                    }
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
+                             bg-violet-600 text-white rounded-lg shadow-sm
+                             hover:bg-violet-700 active:scale-[0.97]
+                             transition-all text-xs font-medium
+                             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
+                  <Download size={13} />
+                  <span>PDF</span>
+                </button>
+              </div>
+            </div>
 
-            <button
-              onClick={() =>
-                downloadMarkdownFile(
-                  result.coverLetterFilename,
-                  result.coverLetterContent
-                )
-              }
-              className="w-full flex items-center justify-center gap-2 px-4 py-3
-                         bg-gradient-to-r from-indigo-500 to-indigo-600
-                         text-white rounded-lg hover:opacity-90 transition-opacity font-medium">
-              <span>↓</span>
-              <span>Download Cover Letter</span>
-            </button>
+            <div className="border-t border-slate-100" />
+
+            {/* Cover Letter Download */}
+            <div className="flex flex-row gap-2 items-center justify-between">
+              <p className="text-lg font-semibold uppercase tracking-widest text-slate-500 mb-2">
+                Download Cover Letter
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() =>
+                    downloadMarkdownFile(
+                      result.coverLetterFilename,
+                      result.coverLetterContent
+                    )
+                  }
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
+                             bg-white border border-slate-200 text-slate-500 rounded-lg
+                             hover:bg-slate-50 hover:border-slate-300 hover:text-slate-700
+                             active:scale-[0.97] transition-all text-xs font-medium
+                             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40">
+                  <FileText size={13} />
+                  <span>MD</span>
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await downloadMarkdownAsPdf(
+                        result.coverLetterContent,
+                        result.coverLetterFilename
+                      )
+                    } catch (error) {
+                      console.error("PDF export failed:", error)
+                      alert("Failed to generate PDF. Please try again.")
+                    }
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
+                             bg-indigo-600 text-white rounded-lg shadow-sm
+                             hover:bg-indigo-700 active:scale-[0.97]
+                             transition-all text-xs font-medium
+                             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40">
+                  <Download size={13} />
+                  <span>PDF</span>
+                </button>
+              </div>
+            </div>
           </div>
 
-          <button
-            onClick={() => openSaveForm("success")}
-            className="w-full mt-3 px-4 py-3 text-sm font-medium
+          <div className="flex flex-row gap-2 items-center justify-between">
+            <button
+              onClick={() => openSaveForm("success")}
+              className="w-full mt-3 px-4 py-3 text-sm font-medium
                        bg-gradient-to-r from-emerald-500 to-emerald-600
                        text-white rounded-lg hover:opacity-90 transition-opacity">
-            Save Application
-          </button>
+              Save Application
+            </button>
 
-          <button
-            onClick={() => setView("applicationsList")}
-            className="w-full mt-2 px-4 py-2 text-sm text-gray-500
+            <button
+              onClick={() => setView("applicationsList")}
+              className="w-full mt-2 px-4 py-2 text-sm text-gray-500
                        border border-gray-200 rounded-lg hover:bg-gray-50
                        transition-colors">
-            View Saved Applications
-          </button>
+              View Saved Applications
+            </button>
+          </div>
 
           <button
             onClick={() => window.close()}
@@ -1099,7 +1163,7 @@ function IndexDialog() {
             perplexityConfig?.preparationPlanEnabled && (
               <div className="mt-6">
                 {editingApplication.preparationPlan &&
-                editingApplication.preparationPlan.interviewType ===
+                  editingApplication.preparationPlan.interviewType ===
                   saveFormData.status ? (
                   <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                     <Lightbulb size={18} className="text-green-600" />
@@ -1255,44 +1319,110 @@ function IndexDialog() {
               </dl>
               {(viewingApplication.resumeContent ||
                 viewingApplication.coverLetterContent) && (
-                <div className="mt-5 pt-4 border-t border-gray-100 space-y-2">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                    Documents
-                  </p>
-                  {viewingApplication.resumeContent &&
-                    viewingApplication.resumeFilename && (
-                      <button
-                        onClick={() =>
-                          downloadMarkdownFile(
-                            viewingApplication.resumeFilename,
-                            viewingApplication.resumeContent
-                          )
-                        }
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5
-                                 bg-gradient-to-r from-purple-500 to-purple-600
-                                 text-white text-sm rounded-lg hover:opacity-90 transition-opacity font-medium">
-                        <Download size={14} />
-                        <span>Download CV</span>
-                      </button>
-                    )}
-                  {viewingApplication.coverLetterContent &&
-                    viewingApplication.coverLetterFilename && (
-                      <button
-                        onClick={() =>
-                          downloadMarkdownFile(
-                            viewingApplication.coverLetterFilename,
-                            viewingApplication.coverLetterContent
-                          )
-                        }
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5
-                                 bg-gradient-to-r from-indigo-500 to-indigo-600
-                                 text-white text-sm rounded-lg hover:opacity-90 transition-opacity font-medium">
-                        <Download size={14} />
-                        <span>Download Cover Letter</span>
-                      </button>
-                    )}
-                </div>
-              )}
+                  <div className="mt-5 pt-4 border-t border-gray-100 space-y-3">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                      Documents
+                    </p>
+
+                    {/* Resume Download */}
+                    {viewingApplication.resumeContent &&
+                      viewingApplication.resumeFilename && (
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5">
+                            Resume
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() =>
+                                downloadMarkdownFile(
+                                  viewingApplication.resumeFilename,
+                                  viewingApplication.resumeContent
+                                )
+                              }
+                              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
+                                       bg-white border border-slate-200 text-slate-500 rounded-lg
+                                       hover:bg-slate-50 hover:border-slate-300 hover:text-slate-700
+                                       active:scale-[0.97] transition-all text-xs font-medium
+                                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
+                              <FileText size={12} />
+                              <span>MD</span>
+                            </button>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await downloadMarkdownAsPdf(
+                                    viewingApplication.resumeContent,
+                                    viewingApplication.resumeFilename
+                                  )
+                                } catch (error) {
+                                  console.error("PDF export failed:", error)
+                                  alert(
+                                    "Failed to generate PDF. Please try again."
+                                  )
+                                }
+                              }}
+                              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
+                                       bg-violet-600 text-white rounded-lg shadow-sm
+                                       hover:bg-violet-700 active:scale-[0.97]
+                                       transition-all text-xs font-medium
+                                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
+                              <Download size={12} />
+                              <span>PDF</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Cover Letter Download */}
+                    {viewingApplication.coverLetterContent &&
+                      viewingApplication.coverLetterFilename && (
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5">
+                            Cover Letter
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() =>
+                                downloadMarkdownFile(
+                                  viewingApplication.coverLetterFilename,
+                                  viewingApplication.coverLetterContent
+                                )
+                              }
+                              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
+                                       bg-white border border-slate-200 text-slate-500 rounded-lg
+                                       hover:bg-slate-50 hover:border-slate-300 hover:text-slate-700
+                                       active:scale-[0.97] transition-all text-xs font-medium
+                                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40">
+                              <FileText size={12} />
+                              <span>MD</span>
+                            </button>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await downloadMarkdownAsPdf(
+                                    viewingApplication.coverLetterContent,
+                                    viewingApplication.coverLetterFilename
+                                  )
+                                } catch (error) {
+                                  console.error("PDF export failed:", error)
+                                  alert(
+                                    "Failed to generate PDF. Please try again."
+                                  )
+                                }
+                              }}
+                              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
+                                       bg-indigo-600 text-white rounded-lg shadow-sm
+                                       hover:bg-indigo-700 active:scale-[0.97]
+                                       transition-all text-xs font-medium
+                                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40">
+                              <Download size={12} />
+                              <span>PDF</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                  </div>
+                )}
 
               {/* Preparation Plan Section */}
               {viewingApplication.preparationPlan && (
@@ -1431,13 +1561,12 @@ function IndexDialog() {
                       <td className="px-4 py-3">
                         {app.matchPercentage != null ? (
                           <span
-                            className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                              app.matchPercentage >= 70
-                                ? "bg-green-100 text-green-800"
-                                : app.matchPercentage >= 50
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
-                            }`}>
+                            className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${app.matchPercentage >= 70
+                              ? "bg-green-100 text-green-800"
+                              : app.matchPercentage >= 50
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
+                              }`}>
                             {app.matchPercentage}%
                           </span>
                         ) : (
@@ -1469,33 +1598,7 @@ function IndexDialog() {
                             className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
                             <Pencil size={14} />
                           </button>
-                          {app.resumeContent && app.resumeFilename && (
-                            <button
-                              title="Download CV"
-                              onClick={() =>
-                                downloadMarkdownFile(
-                                  app.resumeFilename,
-                                  app.resumeContent
-                                )
-                              }
-                              className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
-                              <FileText size={14} />
-                            </button>
-                          )}
-                          {app.coverLetterContent &&
-                            app.coverLetterFilename && (
-                              <button
-                                title="Download Cover Letter"
-                                onClick={() =>
-                                  downloadMarkdownFile(
-                                    app.coverLetterFilename,
-                                    app.coverLetterContent
-                                  )
-                                }
-                                className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
-                                <Mail size={14} />
-                              </button>
-                            )}
+
                           <div className="w-px h-4 bg-gray-200 mx-1" />
                           {deleteConfirmId === app.id ? (
                             <button
@@ -1614,13 +1717,12 @@ function IndexDialog() {
 
         {status && (
           <p
-            className={`mt-3 text-sm ${
-              status.includes("failed") ||
+            className={`mt-3 text-sm ${status.includes("failed") ||
               status.includes("error") ||
               status.includes("Error")
-                ? "text-red-600"
-                : "text-purple-600"
-            }`}>
+              ? "text-red-600"
+              : "text-purple-600"
+              }`}>
             {status}
           </p>
         )}
