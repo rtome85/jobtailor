@@ -16,18 +16,20 @@ export function LinkedInImportButton({ onImport }: LinkedInImportButtonProps) {
     setErrorMsg("")
 
     try {
-      const tabs = await chrome.tabs.query({
-        url: "*://*.linkedin.com/in/*"
+      const [activeTab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
       })
 
-      if (!tabs.length || tabs[0].id == null) {
+      const isLinkedInProfile =
+        activeTab?.url && /^https:\/\/(www\.)?linkedin\.com\/in\//.test(activeTab.url)
+
+      if (!activeTab?.id || !isLinkedInProfile) {
         setState("no-tab")
         return
       }
 
-      const tabId = tabs[0].id
-
-      const response = await chrome.tabs.sendMessage(tabId, {
+      const response = await chrome.tabs.sendMessage(activeTab.id, {
         action: "getLinkedInProfile"
       })
 

@@ -36,6 +36,42 @@ import {
 
 import "./style.css"
 
+function mergeWorkExperience(
+  existing: UserProfile["workExperience"],
+  incoming: UserProfile["workExperience"] = []
+): UserProfile["workExperience"] {
+  const key = (w: UserProfile["workExperience"][number]) =>
+    `${w.company}|${w.jobTitle}|${w.startDate}`
+  const seen = new Set(existing.map(key))
+  return [...existing, ...incoming.filter((w) => !seen.has(key(w)))]
+}
+
+function mergeEducation(
+  existing: UserProfile["education"],
+  incoming: UserProfile["education"] = []
+): UserProfile["education"] {
+  const key = (e: UserProfile["education"][number]) =>
+    `${e.institution}|${e.degree}`
+  const seen = new Set(existing.map(key))
+  return [...existing, ...incoming.filter((e) => !seen.has(key(e)))]
+}
+
+function mergeSkills(
+  existing: UserProfile["skills"],
+  incoming: UserProfile["skills"] = []
+): UserProfile["skills"] {
+  const seen = new Set(existing.map((s) => s.name.toLowerCase()))
+  return [...existing, ...incoming.filter((s) => !seen.has(s.name.toLowerCase()))]
+}
+
+function mergeLanguages(
+  existing: UserProfile["languages"],
+  incoming: UserProfile["languages"] = []
+): UserProfile["languages"] {
+  const seen = new Set(existing.map((l) => l.name.toLowerCase()))
+  return [...existing, ...incoming.filter((l) => !seen.has(l.name.toLowerCase()))]
+}
+
 function Options() {
   const [activeTab, setActiveTab] = useState("ai-settings")
 
@@ -1178,12 +1214,13 @@ function Options() {
                   github: data.personalInfo?.github || userProfile.personalInfo.github,
                   summary: data.personalInfo?.summary || userProfile.personalInfo.summary
                 },
-                workExperience: data.workExperience?.length
-                  ? data.workExperience
-                  : userProfile.workExperience,
-                education: data.education?.length ? data.education : userProfile.education,
-                skills: data.skills?.length ? data.skills : userProfile.skills,
-                languages: data.languages?.length ? data.languages : userProfile.languages
+                workExperience: mergeWorkExperience(
+                  userProfile.workExperience,
+                  data.workExperience
+                ),
+                education: mergeEducation(userProfile.education, data.education),
+                skills: mergeSkills(userProfile.skills, data.skills),
+                languages: mergeLanguages(userProfile.languages, data.languages)
               })
             }}
           />

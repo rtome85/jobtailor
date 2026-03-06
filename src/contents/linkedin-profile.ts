@@ -1,10 +1,11 @@
 import type { PlasmoCSConfig } from "plasmo"
+
 import type {
-  UserProfile,
-  WorkExperience,
   Education,
+  Language,
   Skill,
-  Language
+  UserProfile,
+  WorkExperience
 } from "~types/userProfile"
 
 export const config: PlasmoCSConfig = {
@@ -38,8 +39,18 @@ function parseLinkedInDate(str: string): string | null {
   if (!str || str === "Present" || str === "–" || str === "-") return null
 
   const monthMap: Record<string, string> = {
-    Jan: "01", Feb: "02", Mar: "03", Apr: "04", May: "05", Jun: "06",
-    Jul: "07", Aug: "08", Sep: "09", Oct: "10", Nov: "11", Dec: "12"
+    Jan: "01",
+    Feb: "02",
+    Mar: "03",
+    Apr: "04",
+    May: "05",
+    Jun: "06",
+    Jul: "07",
+    Aug: "08",
+    Sep: "09",
+    Oct: "10",
+    Nov: "11",
+    Dec: "12"
   }
 
   // "Jan 2020" or "January 2020"
@@ -58,16 +69,32 @@ function parseLinkedInDate(str: string): string | null {
   return null
 }
 
-// Parse date range like "Jan 2020 – Present" or "2018 – 2022"
-function parseDateRange(text: string): { startDate: string; endDate: string | null } {
+// Strip duration suffixes like "· 4 yrs 2 mos", "• 3 mos", "(2 years)", trailing "yrs"/"mos"
+function stripDurationSuffix(s: string): string {
+  return s
+    .replace(/[·•]\s*[\d\w\s]+(?:yr|yrs|mo|mos)\b.*/i, "")
+    .replace(/\(.*?\)/g, "")
+    .replace(/\b\d+\s*(?:yr|yrs|mo|mos)\b.*/i, "")
+    .trim()
+}
+
+// Parse date range like "Jan 2020 – Present" or "2018 – 2022 · 4 yrs"
+function parseDateRange(text: string): {
+  startDate: string
+  endDate: string | null
+} {
   const parts = text.split(/\s*[–—-]\s*/)
-  const startDate = parseLinkedInDate(parts[0]?.trim()) || ""
-  const endDate = parts[1] ? parseLinkedInDate(parts[1]?.trim()) : null
+  const startDate = parseLinkedInDate(stripDurationSuffix(parts[0] ?? "")) || ""
+  const endDate = parts[1]
+    ? parseLinkedInDate(stripDurationSuffix(parts[1]))
+    : null
   return { startDate, endDate }
 }
 
 function extractFromJsonLd(): Partial<UserProfile> | null {
-  const scripts = document.querySelectorAll('script[type="application/ld+json"]')
+  const scripts = document.querySelectorAll(
+    'script[type="application/ld+json"]'
+  )
   for (const script of scripts) {
     try {
       const data = JSON.parse(script.textContent || "")
@@ -87,10 +114,12 @@ function extractFromJsonLd(): Partial<UserProfile> | null {
 
         // Extract work experience from worksFor
         if (data.worksFor) {
-          const works = Array.isArray(data.worksFor) ? data.worksFor : [data.worksFor]
+          const works = Array.isArray(data.worksFor)
+            ? data.worksFor
+            : [data.worksFor]
           result.workExperience = works.map((w: any) => ({
             id: crypto.randomUUID(),
-            jobTitle: w.name || "",
+            jobTitle: "",
             company: w.name || "",
             startDate: "",
             endDate: null,
@@ -100,7 +129,9 @@ function extractFromJsonLd(): Partial<UserProfile> | null {
 
         // Extract education from alumniOf
         if (data.alumniOf) {
-          const schools = Array.isArray(data.alumniOf) ? data.alumniOf : [data.alumniOf]
+          const schools = Array.isArray(data.alumniOf)
+            ? data.alumniOf
+            : [data.alumniOf]
           result.education = schools.map((s: any) => ({
             id: crypto.randomUUID(),
             degree: "",
@@ -172,8 +203,9 @@ function extractFromDom(): Partial<UserProfile> {
         item.querySelectorAll("span[aria-hidden='true']")[1]?.textContent
       )
       const dateText = normalizeWhitespace(
-        item.querySelector(".pvs-entity__caption-wrapper span[aria-hidden='true']")
-          ?.textContent ||
+        item.querySelector(
+          ".pvs-entity__caption-wrapper span[aria-hidden='true']"
+        )?.textContent ||
           item.querySelectorAll("span[aria-hidden='true']")[2]?.textContent
       )
       const description = normalizeWhitespace(
@@ -288,7 +320,8 @@ function mergeProfiles(
   if (jsonLd.personalInfo) {
     merged.personalInfo = {
       ...dom.personalInfo!,
-      fullName: dom.personalInfo?.fullName || jsonLd.personalInfo.fullName || "",
+      fullName:
+        dom.personalInfo?.fullName || jsonLd.personalInfo.fullName || "",
       summary: dom.personalInfo?.summary || jsonLd.personalInfo.summary || ""
     }
   }
