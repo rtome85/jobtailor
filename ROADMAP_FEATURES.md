@@ -1,7 +1,7 @@
 # JobTailor - Plano de Desenvolvimento de Features
 
 **Data:** 2026-03-06  
-**Versão:** 1.1  
+**Versão:** 1.2  
 **Estado:** Em Desenvolvimento - Fase 1 Ativa
 
 ---
@@ -48,10 +48,14 @@ O JobTailor é uma extensão de browser (Chrome/Firefox) construída com o frame
 ```
 src/
 ├── api/
-│   └── perplexityClient.ts      # Cliente Perplexity API
+│   ├── ollamaClient.ts            # Cliente Ollama API
+│   └── perplexityClient.ts         # Cliente Perplexity API
 ├── background/
+│   ├── index.ts                    # Background script principal
+│   ├── context-menu.ts             # Menu de contexto
 │   └── messages/
-│       └── generateDocuments.ts # Handler de geração de docs
+│       ├── generateDocuments.ts    # Handler de geração de docs
+│       └── testOllamaConnection.ts # Teste de conexão
 ├── components/
 │   ├── ArrayInput.tsx
 │   ├── CertificateEditor.tsx
@@ -61,22 +65,32 @@ src/
 │   ├── LanguageEditor.tsx
 │   ├── ModelSelector.tsx
 │   ├── PersonalInfo.tsx
-│   ├── PreparationPlanModal.tsx # Modal de planos de prep
+│   ├── PreparationPlanModal.tsx   # Modal de planos de preparação
 │   ├── ProjectEditor.tsx
-│   ├── PromptDialog.tsx         # Dialog de prompts
+│   ├── PromptDialog.tsx           # Dialog de prompts
 │   ├── SkillEditor.tsx
 │   └── Tabs.tsx
+├── contents/
+│   └── jobScrapper.ts              # Scraper de páginas de emprego
+├── lib/
+│   └── pdf/
+│       ├── index.ts                # Exports principais
+│       ├── md-to-pdf.ts            # Lógica de geração PDF
+│       ├── styles.ts               # Estilos do documento
+│       └── map-tokens.ts           # Conversão Markdown → PDF
+├── storage/
+│   └── keys.ts                     # Chaves de storage
 ├── tabs/
-│   └── dialog.tsx               # UI principal da extensão
+│   └── dialog.tsx                  # UI principal da extensão
 ├── types/
-│   ├── config.ts                # Tipos de configuração
-│   └── userProfile.ts           # Tipos de perfil
+│   ├── config.ts                   # Tipos de configuração
+│   └── userProfile.ts              # Tipos de perfil
 ├── utils/
-│   ├── documentFormatter.ts     # Formatação de docs
-│   └── googleDriveSync.ts       # Sync com Google Drive
-├── options.tsx                  # Página de opções/settings
-├── popup.tsx                    # Popup da extensão
-└── style.css                    # Estilos globais
+│   ├── documentFormatter.ts        # Formatação de docs
+│   └── googleDriveSync.ts         # Sync com Google Drive
+├── options.tsx                     # Página de opções/settings
+├── popup.tsx                       # Popup da extensão
+└── style.css                       # Estilos globais
 ```
 
 ### Padrões de UI/UX Identificados
@@ -212,13 +226,13 @@ Saved → Applied → HR Interview → 1st Technical Interview →
 - 90% das empresas pedem CV em PDF, não Markdown
 - Elimina necessidade de ferramentas externas
 
-**Implementação Proposta:**
+**Implementação:**
 
 ```typescript
-// Bibliotecas: jsPDF + html2canvas ou react-pdf
-// Novo botão: "Download as PDF"
-// Templates de formatação pré-definidos
-// Preview antes de download
+// Bibliotecas: pdfmake + marked
+// Novo botão: "Download as PDF" (ao lado de "Download MD")
+// Conversão: Markdown → AST (marked) → pdfmake Content
+// Suporte: Headers, listas, bold, italic, code blocks
 ```
 
 **Status:** ✅ IMPLEMENTADO (2026-03-06)
@@ -226,29 +240,30 @@ Saved → Applied → HR Interview → 1st Technical Interview →
 **Esforço:** Médio  
 **Impacto:** ⭐⭐⭐⭐⭐ Muito Alto
 
-**Ficheiros Modificados:**
+**Ficheiros Criados:**
 
-- ✅ `src/utils/pdfGenerator.ts` (novo) - Utilitário de geração de PDF com html2canvas + jsPDF
-- ✅ `src/tabs/dialog.tsx` - Botões PDF adicionados em 3 locais:
-  1. Tela de sucesso (Success Screen)
-  2. Modal de detalhes da aplicação (Application Details)
-  3. Tabela de aplicações (Actions column)
-- ✅ `package.json` - Dependências jspdf e html2canvas adicionadas
+- ✅ `src/lib/pdf/index.ts` - Exports principais do módulo
+- ✅ `src/lib/pdf/md-to-pdf.ts` - Lógica de geração PDF com pdfmake
+- ✅ `src/lib/pdf/styles.ts` - Estilos e layout do documento
+- ✅ `src/lib/pdf/map-tokens.ts` - Conversão Markdown AST → pdfmake Content
 
 **Funcionalidades Implementadas:**
 
-- Conversão de Markdown para HTML formatado
-- Geração de PDF multi-página (A4)
-- Formatação preservada: headers, bold, italic, code blocks, listas, links
-- Fallback para geração texto-base se html2canvas falhar
-- UI consistente com design system existente (botões outline)
+- Conversão de Markdown para PDF usando pdfmake
+- Parsing de Markdown com marked (lexer)
+- Mapeamento de tokens: headers, listas, bold, italic, code blocks, links
+- normalização de texto para caracteres especiais/Unicode
+- Pré-processamento de contacto info (separadores | entre campos)
+- UI: botões MD e PDF lado a lado
+- Preview em modal antes de guardar
 
 **Notas Técnicas:**
 
-- Usa html2canvas para renderizar HTML como imagem
-- jsPDF cria documento PDF com múltiplas páginas se necessário
-- Container temporário criado e removido automaticamente
-- Scale 2x para melhor qualidade de imagem
+- Usa pdfmake para geração de PDF
+- marked para parsing do Markdown para AST
+- Fontes: Roboto (embedded no vfs)
+- Suporte a múltiplas páginas
+- Estilos personalizáveis para CV
 
 ---
 
@@ -506,14 +521,14 @@ Saved → Applied → HR Interview → 1st Technical Interview →
 
 **Meta:** Features de maior impacto imediato
 
-- ✅ **Export PDF** - Resolve problema crítico
-- 🔄 **Tags e Notas** - Melhoria rápida de UX
-- ⏳ **Dark Mode** - Facilita implementação futura
+- ✅ **Export PDF** - Implementado com pdfmake + marked (2026-03-06)
+- ⏳ **Tags e Notas** - Pendente
+- ⏳ **Dark Mode** - Pendente
 
 **Deliverables:**
 
-- ✅ PDF generation funcionando (2026-03-06)
-- 🔄 Sistema de tags em desenvolvimento
+- ✅ PDF generation funcionando
+- ⏳ Sistema de tags pendente
 - ⏳ Tema escuro pendente
 
 ---
@@ -586,14 +601,15 @@ Saved → Applied → HR Interview → 1st Technical Interview →
 - Validar dados importados
 - CSP headers adequados
 
-### Dependências Potenciais
+### Dependências Atuais
 
 ```json
 {
-  "jspdf": "^2.5.1",
-  "html2canvas": "^1.4.1",
-  "recharts": "^2.10.0",
-  "date-fns": "^2.30.0"
+  "pdfmake": "^0.3.5",
+  "marked": "^17.0.4",
+  "lucide-react": "^0.575.0",
+  "@plasmohq/messaging": "^0.7.2",
+  "@plasmohq/storage": "^1.0.0"
 }
 ```
 
@@ -619,4 +635,4 @@ O JobTailor tem uma base sólida com arquitetura extensível. As features propos
 ---
 
 **Documento criado por:** Claude (Opencode AI)  
-**Última atualização:** 2026-03-06
+**Última atualização:** 2026-03-06 (v1.2 - Atualização após análise do codebase)
