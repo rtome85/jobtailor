@@ -7,6 +7,7 @@ import { CertificateEditor } from "~components/CertificateEditor"
 import { EducationEditor } from "~components/Education"
 import { ExperienceEditor } from "~components/ExperienceEditor"
 import { LanguageEditor } from "~components/LanguageEditor"
+import { LinkedInImportButton } from "~components/LinkedInImportButton"
 import { PersonalInfo } from "~components/PersonalInfo"
 import { ProjectEditor } from "~components/ProjectEditor"
 import { PromptDialog } from "~components/PromptDialog"
@@ -1163,6 +1164,29 @@ function Options() {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Personal Information
           </h2>
+          <LinkedInImportButton
+            onImport={(data) => {
+              setUserProfile({
+                ...userProfile,
+                personalInfo: {
+                  fullName: data.personalInfo?.fullName || userProfile.personalInfo.fullName,
+                  email: userProfile.personalInfo.email,
+                  phone: userProfile.personalInfo.phone,
+                  location: data.personalInfo?.location || userProfile.personalInfo.location,
+                  website: data.personalInfo?.website || userProfile.personalInfo.website,
+                  linkedin: data.personalInfo?.linkedin || userProfile.personalInfo.linkedin,
+                  github: data.personalInfo?.github || userProfile.personalInfo.github,
+                  summary: data.personalInfo?.summary || userProfile.personalInfo.summary
+                },
+                workExperience: data.workExperience?.length
+                  ? data.workExperience
+                  : userProfile.workExperience,
+                education: data.education?.length ? data.education : userProfile.education,
+                skills: data.skills?.length ? data.skills : userProfile.skills,
+                languages: data.languages?.length ? data.languages : userProfile.languages
+              })
+            }}
+          />
           <PersonalInfo
             personalInfo={userProfile.personalInfo}
             onChange={(personalInfo) =>
