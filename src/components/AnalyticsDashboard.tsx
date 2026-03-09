@@ -189,8 +189,13 @@ export function AnalyticsDashboard({ applications }: Props) {
     cumSum += stats.statusCounts.get(funnelStatuses[i]) ?? 0
     cumulativeCounts.set(funnelStatuses[i], cumSum)
   }
-  const maxFunnelCount = Math.max(cumulativeCounts.get(funnelStatuses[0]) ?? 0, 1)
+
   const rejectCount = stats.statusCounts.get("Reject") ?? 0
+  const maxFunnelCount = Math.max(
+    cumulativeCounts.get(funnelStatuses[0]) ?? 0,
+    rejectCount,
+    1
+  )
   const maxBarCount = Math.max(...activityData.map((d) => d.count), 1)
   const maxTagCount = Math.max(
     ...stats.tagCounts.map(([, c]) => c),
@@ -356,11 +361,10 @@ export function AnalyticsDashboard({ applications }: Props) {
                 <button
                   key={p}
                   onClick={() => setPeriod(p)}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                    period === p
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}>
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${period === p
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                    }`}>
                   {p === "daily" ? "Daily" : p === "weekly" ? "Weekly" : "Monthly"}
                 </button>
               ))}
@@ -389,11 +393,10 @@ export function AnalyticsDashboard({ applications }: Props) {
                         style={{ height: `${height}%` }}
                       />
                       <span
-                        className={`text-[10px] text-gray-400 mt-2 ${
-                          period === "weekly"
-                            ? "whitespace-nowrap -rotate-45 origin-top-center"
-                            : ""
-                        }`}>
+                        className={`text-[10px] text-gray-400 mt-2 ${period === "weekly"
+                          ? "whitespace-nowrap -rotate-45 origin-top-center"
+                          : ""
+                          }`}>
                         {d.label}
                       </span>
                     </div>
