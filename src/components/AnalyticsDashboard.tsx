@@ -181,10 +181,15 @@ export function AnalyticsDashboard({ applications }: Props) {
   }
 
   const funnelStatuses = APPLICATION_STATUSES.filter((s) => s !== "Reject")
-  const maxFunnelCount = Math.max(
-    ...funnelStatuses.map((s) => stats.statusCounts.get(s) ?? 0),
-    1
-  )
+  // Cumulative counts: apps that reached *at least* this stage.
+  // An app at stage N has implicitly passed through all earlier stages.
+  const cumulativeCounts = new Map<ApplicationStatus, number>()
+  let cumSum = 0
+  for (let i = funnelStatuses.length - 1; i >= 0; i--) {
+    cumSum += stats.statusCounts.get(funnelStatuses[i]) ?? 0
+    cumulativeCounts.set(funnelStatuses[i], cumSum)
+  }
+  const maxFunnelCount = Math.max(cumulativeCounts.get(funnelStatuses[0]) ?? 0, 1)
   const rejectCount = stats.statusCounts.get("Reject") ?? 0
   const maxBarCount = Math.max(...activityData.map((d) => d.count), 1)
   const maxTagCount = Math.max(
@@ -272,15 +277,15 @@ export function AnalyticsDashboard({ applications }: Props) {
         </div>
         <div className="space-y-1.5">
           {funnelStatuses.map((status, i) => {
-            const count = stats.statusCounts.get(status) ?? 0
-            const width = (count / maxFunnelCount) * 100
-            const prevCount =
+            const cumCount = cumulativeCounts.get(status) ?? 0
+            const width = (cumCount / maxFunnelCount) * 100
+            const prevCumCount =
               i > 0
-                ? stats.statusCounts.get(funnelStatuses[i - 1]) ?? 0
+                ? cumulativeCounts.get(funnelStatuses[i - 1]) ?? 0
                 : null
             const conversion =
-              prevCount !== null && prevCount > 0
-                ? ((count / prevCount) * 100).toFixed(0)
+              prevCumCount !== null && prevCumCount > 0
+                ? ((cumCount / prevCumCount) * 100).toFixed(0)
                 : null
 
             return (
@@ -298,11 +303,11 @@ export function AnalyticsDashboard({ applications }: Props) {
                 <div className="flex-1 bg-gray-100/80 rounded h-6 relative overflow-hidden">
                   <div
                     className={`h-full rounded transition-all duration-500 ${FUNNEL_COLORS[status]}`}
-                    style={{ width: `${Math.max(width, count > 0 ? 3 : 0)}%` }}
+                    style={{ width: `${Math.max(width, cumCount > 0 ? 3 : 0)}%` }}
                   />
                 </div>
                 <span className="w-7 text-xs tabular-nums font-semibold text-gray-900 text-right">
-                  {count}
+                  {cumCount}
                 </span>
               </div>
             )
