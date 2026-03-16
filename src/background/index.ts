@@ -1,7 +1,10 @@
 import { SYNC_KEYS } from "~storage/keys"
 import { push } from "~utils/googleDriveSync"
 
-import { createContextMenu } from "~background/context-menu"
+import { createContextMenu, handleContextMenuClick } from "~background/context-menu"
+
+// MV3: must be registered at top-level so it persists across service worker restarts
+chrome.contextMenus.onClicked.addListener(handleContextMenuClick)
 
 chrome.runtime.onInstalled.addListener(async () => {
   await createContextMenu()
