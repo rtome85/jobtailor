@@ -36,6 +36,8 @@ import {
 
 import "./style.css"
 
+const EXTENSION_VERSION = "0.4.1"
+
 function mergeWorkExperience(
   existing: UserProfile["workExperience"],
   incoming: UserProfile["workExperience"] = []
@@ -61,7 +63,10 @@ function mergeSkills(
   incoming: UserProfile["skills"] = []
 ): UserProfile["skills"] {
   const seen = new Set(existing.map((s) => s.name.toLowerCase()))
-  return [...existing, ...incoming.filter((s) => !seen.has(s.name.toLowerCase()))]
+  return [
+    ...existing,
+    ...incoming.filter((s) => !seen.has(s.name.toLowerCase()))
+  ]
 }
 
 function mergeLanguages(
@@ -69,7 +74,10 @@ function mergeLanguages(
   incoming: UserProfile["languages"] = []
 ): UserProfile["languages"] {
   const seen = new Set(existing.map((l) => l.name.toLowerCase()))
-  return [...existing, ...incoming.filter((l) => !seen.has(l.name.toLowerCase()))]
+  return [
+    ...existing,
+    ...incoming.filter((l) => !seen.has(l.name.toLowerCase()))
+  ]
 }
 
 function Options() {
@@ -1205,20 +1213,35 @@ function Options() {
               setUserProfile({
                 ...userProfile,
                 personalInfo: {
-                  fullName: data.personalInfo?.fullName || userProfile.personalInfo.fullName,
+                  fullName:
+                    data.personalInfo?.fullName ||
+                    userProfile.personalInfo.fullName,
                   email: userProfile.personalInfo.email,
                   phone: userProfile.personalInfo.phone,
-                  location: data.personalInfo?.location || userProfile.personalInfo.location,
-                  website: data.personalInfo?.website || userProfile.personalInfo.website,
-                  linkedin: data.personalInfo?.linkedin || userProfile.personalInfo.linkedin,
-                  github: data.personalInfo?.github || userProfile.personalInfo.github,
-                  summary: data.personalInfo?.summary || userProfile.personalInfo.summary
+                  location:
+                    data.personalInfo?.location ||
+                    userProfile.personalInfo.location,
+                  website:
+                    data.personalInfo?.website ||
+                    userProfile.personalInfo.website,
+                  linkedin:
+                    data.personalInfo?.linkedin ||
+                    userProfile.personalInfo.linkedin,
+                  github:
+                    data.personalInfo?.github ||
+                    userProfile.personalInfo.github,
+                  summary:
+                    data.personalInfo?.summary ||
+                    userProfile.personalInfo.summary
                 },
                 workExperience: mergeWorkExperience(
                   userProfile.workExperience,
                   data.workExperience
                 ),
-                education: mergeEducation(userProfile.education, data.education),
+                education: mergeEducation(
+                  userProfile.education,
+                  data.education
+                ),
                 skills: mergeSkills(userProfile.skills, data.skills),
                 languages: mergeLanguages(userProfile.languages, data.languages)
               })
@@ -1503,7 +1526,7 @@ function Options() {
           )}
 
           <div className="mt-8 text-sm text-gray-500">
-            <p>JobTailor v1.0.0 — Built with Plasmo Framework</p>
+            <p>JobTailor v{EXTENSION_VERSION} — Built with Plasmo Framework</p>
           </div>
         </div>
       </div>
