@@ -42,7 +42,7 @@ export async function handleContextMenuClick(
       return
     }
 
-    chrome.storage.local.set({
+    await chrome.storage.local.set({
       [STORAGE_KEYS.PENDING_JOB_DATA]: {
         selectedText: jobDescription,
         tabUrl: tab.url,
