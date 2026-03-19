@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -34,22 +36,23 @@
   --color-focus-ring: #818cf8;
 
   /* Options page — Pencil design system */
-  --color-sidebar: #1F1C19;
-  --color-sidebar-hover: #2C2825;
+  --color-sidebar: #1f1c19;
+  --color-sidebar-hover: #2c2825;
   --color-sidebar-divide: #333333;
   --color-sidebar-label: #555555;
   --color-sidebar-item: #777777;
-  --color-sidebar-active: #FFFFFF;
-  --color-sidebar-accent: #C05A3C;
-  --color-canvas: #F5F3EF;
-  --color-canvas-divide: #E8E4DC;
-  --color-canvas-input-border: #C8C3BB;
+  --color-sidebar-active: #ffffff;
+  --color-sidebar-accent: #c05a3c;
+  --color-canvas: #f5f3ef;
+  --color-canvas-divide: #e8e4dc;
+  --color-canvas-input-border: #c8c3bb;
   --color-ink: #1a1a1a;
   --color-ink-secondary: #888888;
-  --color-ink-muted: #AAAAAA;
+  --color-ink-muted: #aaaaaa;
 
   /* Typography */
-  --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
