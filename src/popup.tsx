@@ -1,7 +1,5 @@
 import { useState } from "react"
-import { BarChart3, Briefcase, ChevronRight, Loader2, Settings, Sparkles } from "lucide-react"
-
-import iconUrl from "url:../assets/icon.png"
+import { BarChart3, Briefcase, ChevronRight, Loader2, Settings2 } from "lucide-react"
 
 import "./style.css"
 
@@ -33,7 +31,6 @@ function IndexPopup() {
         return
       }
 
-
       await new Promise((resolve) => setTimeout(resolve, 500))
 
       const response = await chrome.tabs.sendMessage(tab.id, {
@@ -46,7 +43,6 @@ function IndexPopup() {
         return
       }
 
-      // Store job data for dialog
       chrome.storage.local.set({
         pendingJobData: {
           selectedText: response.data,
@@ -57,7 +53,6 @@ function IndexPopup() {
         }
       })
 
-      // Open dialog window
       chrome.windows.create({
         url: chrome.runtime.getURL("tabs/dialog.html"),
         type: "popup",
@@ -102,61 +97,64 @@ function IndexPopup() {
   }
 
   return (
-    <div className="w-72 bg-white">
+    <div className="w-80 bg-canvas border-2 border-sidebar font-body">
       {/* Header */}
-      <div className="px-5 pt-5 pb-4">
-        <div className="flex items-center gap-3">
-          <img src={iconUrl} alt="JobTailor icon" className="w-9 h-9" />
-          <div>
-            <h1 className="text-base font-semibold text-gray-900 leading-tight">
-              JobTailor
-            </h1>
-            <p className="text-xs text-gray-400 leading-tight">
-              Tailor your CV to every job
-            </p>
-          </div>
+      <div className="bg-sidebar px-5 py-4 flex items-center gap-3">
+        <div className="w-10 h-10 bg-sidebar-accent rounded flex items-center justify-center shrink-0">
+          <Briefcase className="w-5 h-5 text-white" />
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <h1 className="font-heading text-[15px] font-bold text-canvas leading-tight">
+            JobTailor
+          </h1>
+          <p className="font-body text-[11px] text-[#9B9490] leading-tight">
+            Tailor your CV to every job
+          </p>
         </div>
       </div>
 
-      {/* Divider + nav */}
-      <div className="border-t border-gray-100 mx-5" />
-      <div className="px-3 py-2">
+      {/* Menu rows */}
+      <div className="bg-surface divide-y divide-canvas-divide">
         <button
           onClick={openApplications}
-          className="w-full flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors group focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-inset">
-          <span className="flex items-center gap-2.5">
-            <Briefcase className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-colors" />
-            My Applications
+          className="w-full flex items-center justify-between px-5 py-4 hover:bg-canvas transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-accent focus-visible:ring-inset">
+          <span className="flex items-center gap-3">
+            <Briefcase className="w-[18px] h-[18px] text-sidebar-label" />
+            <span className="font-heading text-[13px] font-semibold text-ink">
+              My Applications
+            </span>
           </span>
-          <ChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-400 transition-colors" />
+          <ChevronRight className="w-4 h-4 text-ink-muted" />
         </button>
         <button
           onClick={openAnalytics}
-          className="w-full flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors group focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-inset">
-          <span className="flex items-center gap-2.5">
-            <BarChart3 className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-colors" />
-            Analytics
+          className="w-full flex items-center justify-between px-5 py-4 hover:bg-canvas transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-accent focus-visible:ring-inset">
+          <span className="flex items-center gap-3">
+            <BarChart3 className="w-[18px] h-[18px] text-sidebar-label" />
+            <span className="font-heading text-[13px] font-semibold text-ink">
+              Analytics
+            </span>
           </span>
-          <ChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-400 transition-colors" />
+          <ChevronRight className="w-4 h-4 text-ink-muted" />
         </button>
         <button
           onClick={openOptions}
-          className="w-full flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors group focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-inset">
-          <span className="flex items-center gap-2.5">
-            <Settings className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-colors" />
-            Settings & Profile
+          className="w-full flex items-center justify-between px-5 py-4 hover:bg-canvas transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-accent focus-visible:ring-inset">
+          <span className="flex items-center gap-3">
+            <Settings2 className="w-[18px] h-[18px] text-sidebar-label" />
+            <span className="font-heading text-[13px] font-semibold text-ink">
+              Settings & Profile
+            </span>
           </span>
-          <ChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-400 transition-colors" />
+          <ChevronRight className="w-4 h-4 text-ink-muted" />
         </button>
       </div>
 
-      {/* Tip */}
-      <div className="px-5 pb-4 pt-1">
-        <p className="text-xs text-gray-400 leading-relaxed">
+      {/* Footer */}
+      <div className="bg-[#F0EDE8] border-t border-canvas-divide px-5 py-3">
+        <p className="font-body text-[11px] text-ink-secondary leading-relaxed">
           Tip: Right-click any job posting →{" "}
-          <span className="font-medium text-gray-500">
-            Generate CV for this job
-          </span>
+          <span className="font-medium text-ink">Generate CV for this job</span>
         </p>
       </div>
     </div>
