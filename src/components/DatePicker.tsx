@@ -47,7 +47,7 @@ export function DatePicker({
         onChange={handleDateChange}
         disabled={currentPosition}
         required={required && !currentPosition}
-        className="w-full px-4 py-3 bg-canvas border border-canvas-input-border text-ink text-sm
+        className="w-full px-4 py-3 bg-white border border-canvas-input-border text-ink text-sm
                  focus:outline-none focus:border-ink transition-colors
                  disabled:bg-canvas-divide disabled:text-ink-muted disabled:cursor-not-allowed"
       />

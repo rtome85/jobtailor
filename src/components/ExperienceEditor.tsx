@@ -26,10 +26,10 @@ const labelCls =
   "block text-[11px] font-semibold uppercase tracking-widest text-ink-secondary mb-2"
 
 const inputCls =
-  "w-full px-4 py-3 bg-canvas border border-canvas-input-border text-ink text-sm focus:outline-none focus:border-ink transition-colors"
+  "w-full px-4 py-3 bg-white border border-canvas-input-border text-ink text-sm focus:outline-none focus:border-ink transition-colors"
 
 const inputErrorCls =
-  "w-full px-4 py-3 bg-canvas border border-[#fca5a5] text-ink text-sm focus:outline-none focus:border-[#991b1b] transition-colors"
+  "w-full px-4 py-3 bg-white border border-[#fca5a5] text-ink text-sm focus:outline-none focus:border-[#991b1b] transition-colors"
 
 export function ExperienceEditor({ experiences, onChange }: ExperienceEditorProps) {
   const [editingExperience, setEditingExperience] = useState<WorkExperience | null>(null)

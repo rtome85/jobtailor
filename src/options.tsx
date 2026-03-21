@@ -117,10 +117,10 @@ function useDebouncedStorage<T>(
 const card = "bg-white border-2 border-ink p-8"
 
 const inputCls =
-  "w-full px-4 py-3 bg-canvas border border-canvas-input-border text-ink text-sm focus:outline-none focus:border-ink transition-colors"
+  "w-full px-4 py-3 bg-white border border-canvas-input-border text-ink text-sm focus:outline-none focus:border-ink transition-colors"
 
 const textareaCls =
-  "w-full px-4 py-3 bg-canvas border border-canvas-input-border text-ink text-sm font-mono focus:outline-none focus:border-ink transition-colors"
+  "w-full px-4 py-3 bg-white border border-canvas-input-border text-ink text-sm font-mono focus:outline-none focus:border-ink transition-colors"
 
 const labelCls =
   "block text-[11px] font-semibold uppercase tracking-widest text-ink-secondary mb-2"
@@ -137,7 +137,7 @@ const btnAccent =
   "px-5 py-2.5 bg-sidebar-accent text-white border-0 text-[11px] font-bold uppercase tracking-widest cursor-pointer disabled:opacity-50 transition-opacity hover:opacity-90"
 
 const btnSecondary =
-  "px-5 py-2.5 bg-canvas border border-canvas-input-border text-ink text-[11px] font-semibold uppercase tracking-widest cursor-pointer disabled:opacity-50 transition-colors hover:border-ink"
+  "px-5 py-2.5 bg-sidebar-accent text-white border-0 text-[11px] font-bold uppercase tracking-widest cursor-pointer disabled:opacity-50 transition-opacity hover:opacity-90"
 
 const successMsg =
   "bg-[#f0fdf4] border border-[#86efac] text-[#166534] px-4 py-3 text-sm"
@@ -711,7 +711,7 @@ function Options() {
               </p>
               <button
                 onClick={() => openPerplexityDialog("Research Prompt", "research")}
-                className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-canvas border border-canvas-input-border text-ink hover:border-ink transition-colors">
+                className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-sidebar-accent text-white border-0 hover:opacity-90 transition-opacity">
                 Expand
               </button>
             </div>
@@ -769,7 +769,7 @@ function Options() {
                     onClick={() =>
                       openPerplexityDialog("Preparation Plan Prompt", "preparation")
                     }
-                    className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-canvas border border-canvas-input-border text-ink hover:border-ink transition-colors">
+                    className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-sidebar-accent text-white border-0 hover:opacity-90 transition-opacity">
                     Expand
                   </button>
                 </div>
@@ -1089,7 +1089,7 @@ function Options() {
                   <p className={hintCls}>{hint}</p>
                   <button
                     onClick={() => openPromptDialog(label, key)}
-                    className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-canvas border border-canvas-input-border text-ink hover:border-ink transition-colors">
+                    className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-sidebar-accent text-white border-0 hover:opacity-90 transition-opacity">
                     Expand
                   </button>
                 </div>
