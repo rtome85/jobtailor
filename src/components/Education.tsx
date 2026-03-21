@@ -23,10 +23,10 @@ const labelCls =
   "block text-[11px] font-semibold uppercase tracking-widest text-ink-secondary mb-2"
 
 const inputCls =
-  "w-full px-4 py-3 bg-canvas border border-canvas-input-border text-ink text-sm focus:outline-none focus:border-ink transition-colors"
+  "w-full px-4 py-3 bg-white border border-canvas-input-border text-ink text-sm focus:outline-none focus:border-ink transition-colors"
 
 const inputErrorCls =
-  "w-full px-4 py-3 bg-canvas border border-[#fca5a5] text-ink text-sm focus:outline-none focus:border-[#991b1b] transition-colors"
+  "w-full px-4 py-3 bg-white border border-[#fca5a5] text-ink text-sm focus:outline-none focus:border-[#991b1b] transition-colors"
 
 export function EducationEditor({ education, onChange }: EducationEditorProps) {
   const [editingEducation, setEditingEducation] = useState<Education | null>(
@@ -148,7 +148,7 @@ export function EducationEditor({ education, onChange }: EducationEditorProps) {
             placeholder="Describe your coursework, achievements, or relevant projects..."
             rows={3}
             maxLength={300}
-            className="w-full px-4 py-3 bg-canvas border border-canvas-input-border text-ink text-sm focus:outline-none focus:border-ink transition-colors resize-none"
+            className="w-full px-4 py-3 bg-white border border-canvas-input-border text-ink text-sm focus:outline-none focus:border-ink transition-colors resize-none"
           />
           <p className="mt-1 text-[11px] text-ink-secondary">
             {(edu.description || "").length}/300 characters
