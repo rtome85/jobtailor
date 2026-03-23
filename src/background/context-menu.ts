@@ -84,6 +84,18 @@ export async function handleContextMenuClick(
     return
   }
 
+  // Open dialog immediately with extracting state so user gets instant feedback
+  await chrome.storage.local.set({
+    [STORAGE_KEYS.PENDING_JOB_DATA]: { extracting: true }
+  })
+  chrome.windows.create({
+    url: chrome.runtime.getURL("tabs/dialog.html"),
+    type: "popup",
+    width: 500,
+    height: 440,
+    focused: true
+  })
+
   try {
     const client = new OllamaClient(ollamaConfig)
     const extracted = await client.extractJobDetails(rawText, "ministral-3:3b-cloud")
@@ -97,15 +109,10 @@ export async function handleContextMenuClick(
         jobTitle: extracted.jobTitle
       }
     })
-
-    chrome.windows.create({
-      url: chrome.runtime.getURL("tabs/dialog.html"),
-      type: "popup",
-      width: 500,
-      height: 440,
-      focused: true
-    })
   } catch {
+    await chrome.storage.local.set({
+      [STORAGE_KEYS.PENDING_JOB_DATA]: { extracting: false, error: true }
+    })
     showExtractionError()
   }
 }

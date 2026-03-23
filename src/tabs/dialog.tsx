@@ -160,7 +160,7 @@ interface GenerationResult {
   }
 }
 
-type View = "form" | "loading" | "success" | "saveForm" | "applicationsList"
+type View = "form" | "loading" | "success" | "saveForm" | "applicationsList" | "extracting"
 
 function statusTextClass(status: ApplicationStatus): string {
   switch (status) {
@@ -258,17 +258,51 @@ function IndexDialog() {
       (res) => {
         if (res.lastSelectedModel) setSelectedModel(res.lastSelectedModel)
         if (res.userProfile) setUserProfile(res.userProfile)
-        if (res.pendingJobData?.companyName)
-          setCompanyName(res.pendingJobData.companyName)
-        if (res.pendingJobData?.jobTitle)
-          setJobTitle(res.pendingJobData.jobTitle)
-        if (res.pendingJobData?.tabUrl)
-          setPendingJobUrl(res.pendingJobData.tabUrl)
         if (res.savedApplications) setSavedApplications(res.savedApplications)
         if (res.perplexityConfig) setPerplexityConfig(res.perplexityConfig)
+
+        if (res.pendingJobData?.extracting) {
+          setView("extracting")
+        } else {
+          if (res.pendingJobData?.companyName)
+            setCompanyName(res.pendingJobData.companyName)
+          if (res.pendingJobData?.jobTitle)
+            setJobTitle(res.pendingJobData.jobTitle)
+          if (res.pendingJobData?.tabUrl)
+            setPendingJobUrl(res.pendingJobData.tabUrl)
+        }
       }
     )
   }, [])
+
+  useEffect(() => {
+    if (view !== "extracting") return
+
+    const applyData = (data: Record<string, unknown> | null) => {
+      if (!data || data.extracting) return
+      if (data.error) {
+        setStatus("Não foi possível extrair os detalhes. Preenche manualmente.")
+        setView("form")
+        return
+      }
+      if (data.companyName) setCompanyName(data.companyName as string)
+      if (data.jobTitle) setJobTitle(data.jobTitle as string)
+      if (data.tabUrl) setPendingJobUrl(data.tabUrl as string)
+      setView("form")
+    }
+
+    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
+      const change = changes["pendingJobData"]
+      if (change) applyData(change.newValue)
+    }
+
+    chrome.storage.onChanged.addListener(listener)
+
+    // Handle race: extraction may have completed before listener was registered
+    chrome.storage.local.get("pendingJobData", (res) => applyData(res.pendingJobData))
+
+    return () => chrome.storage.onChanged.removeListener(listener)
+  }, [view])
 
   useEffect(() => {
     if (loading) {
@@ -738,15 +772,32 @@ function IndexDialog() {
   }
 
   // Loading screen
+  if (view === "extracting") {
+    return (
+      <div className="min-h-screen bg-canvas flex items-center justify-center p-12">
+        <div className="w-full max-w-md bg-white border-2 border-ink p-8 flex flex-col items-center gap-6 text-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-[3px] border-canvas-divide border-t-sidebar-accent rounded-full animate-spin" />
+            <h2 className="text-[16px] font-bold tracking-[0.1em] text-ink uppercase">
+              Extracting job details…
+            </h2>
+            <p className="text-[13px] text-ink-secondary">
+              Reading the job posting with AI
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (view === "loading") {
     const quote = QUOTES[quoteIndex]
     return (
       <div className="min-h-screen bg-canvas flex items-center justify-center p-12">
         <div className="w-full max-w-md bg-white border-2 border-ink p-8 flex flex-col items-center gap-6 text-center">
           <div className="flex flex-col items-center gap-2">
-            <span className="text-[36px]">✨</span>
             <h2 className="text-[20px] font-bold tracking-[0.1em] text-ink uppercase">
-              Crafting your documents…
+              Crafting your report…
             </h2>
             <p className="text-[13px] text-ink-secondary">This may take a minute</p>
           </div>
@@ -797,12 +848,13 @@ function IndexDialog() {
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-12 py-10 flex flex-col gap-6">
           {/* Hero */}
-          <div className="flex flex-col items-center gap-2 py-6">
-            <span className="text-[40px]">🎉</span>
-            <h2 className="text-[28px] font-bold tracking-[0.05em] text-ink uppercase">
-              Documents Ready!
-            </h2>
-          </div>
+
+
+          <h2 className="text-[28px] font-bold tracking-[0.05em] text-ink uppercase">
+            Your Report Is Ready!
+          </h2>
+
+
 
           {/* Match Card */}
           <div className="bg-white border-2 border-ink p-6 flex flex-col gap-4">
@@ -1982,8 +2034,8 @@ function IndexDialog() {
 
           {status && (
             <p className={`mt-3 text-sm ${status.includes("failed") || status.includes("error") || status.includes("Error")
-                ? "text-red-500"
-                : "text-sidebar-accent"
+              ? "text-red-500"
+              : "text-sidebar-accent"
               }`}>
               {status}
             </p>
