@@ -278,19 +278,29 @@ function IndexDialog() {
   useEffect(() => {
     if (view !== "extracting") return
 
+    const applyData = (data: Record<string, unknown> | null) => {
+      if (!data || data.extracting) return
+      if (data.error) {
+        setStatus("Não foi possível extrair os detalhes. Preenche manualmente.")
+        setView("form")
+        return
+      }
+      if (data.companyName) setCompanyName(data.companyName as string)
+      if (data.jobTitle) setJobTitle(data.jobTitle as string)
+      if (data.tabUrl) setPendingJobUrl(data.tabUrl as string)
+      setView("form")
+    }
+
     const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
       const change = changes["pendingJobData"]
-      if (!change) return
-      const data = change.newValue
-      if (!data?.extracting) {
-        if (data?.companyName) setCompanyName(data.companyName)
-        if (data?.jobTitle) setJobTitle(data.jobTitle)
-        if (data?.tabUrl) setPendingJobUrl(data.tabUrl)
-        setView("form")
-      }
+      if (change) applyData(change.newValue)
     }
 
     chrome.storage.onChanged.addListener(listener)
+
+    // Handle race: extraction may have completed before listener was registered
+    chrome.storage.local.get("pendingJobData", (res) => applyData(res.pendingJobData))
+
     return () => chrome.storage.onChanged.removeListener(listener)
   }, [view])
 
