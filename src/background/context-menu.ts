@@ -31,6 +31,7 @@ export async function handleContextMenuClick(
 
   const selectedText = info.selectionText?.trim() || ""
   const isLinkedIn = tab.url?.includes("linkedin.com") ?? false
+  const isLinkedInJobView = tab.url?.includes("/jobs/view") ?? false
 
   // Get raw page content from content script
   let scraped = { data: "", companyName: "", jobTitle: "" }
@@ -43,7 +44,59 @@ export async function handleContextMenuClick(
     // content script not injected — raw text will be empty
   }
 
-  // ── LinkedIn: keep existing CSS-selector path ──────────────────────────
+  // ── LinkedIn job listing pages: use LLM extraction ──────────────────────
+  if (isLinkedIn && isLinkedInJobView) {
+    const rawText = selectedText || scraped.data
+    if (!rawText) {
+      showExtractionError()
+      return
+    }
+
+    const storage = await chrome.storage.local.get([STORAGE_KEYS.OLLAMA_CONFIG])
+    const ollamaConfig = storage[STORAGE_KEYS.OLLAMA_CONFIG]
+
+    if (!ollamaConfig?.apiKey) {
+      showExtractionError()
+      return
+    }
+
+    await chrome.storage.local.set({
+      [STORAGE_KEYS.PENDING_JOB_DATA]: { extracting: true }
+    })
+    chrome.windows.create({
+      url: chrome.runtime.getURL("tabs/dialog.html"),
+      type: "popup",
+      width: 500,
+      height: 440,
+      focused: true
+    })
+
+    try {
+      const client = new OllamaClient(ollamaConfig)
+      const extracted = await client.extractJobDetails(
+        rawText,
+        "ministral-3:3b-cloud"
+      )
+
+      await chrome.storage.local.set({
+        [STORAGE_KEYS.PENDING_JOB_DATA]: {
+          selectedText: extracted.jobDescription || rawText,
+          tabUrl: tab.url,
+          tabId: tab.id,
+          companyName: extracted.companyName || scraped.companyName,
+          jobTitle: extracted.jobTitle || scraped.jobTitle
+        }
+      })
+    } catch {
+      await chrome.storage.local.set({
+        [STORAGE_KEYS.PENDING_JOB_DATA]: { extracting: false, error: true }
+      })
+      showExtractionError()
+    }
+    return
+  }
+
+  // ── Other LinkedIn pages: keep existing CSS-selector path ───────────────
   if (isLinkedIn) {
     const jobDescription = selectedText || scraped.data
     if (!jobDescription) {
@@ -98,7 +151,10 @@ export async function handleContextMenuClick(
 
   try {
     const client = new OllamaClient(ollamaConfig)
-    const extracted = await client.extractJobDetails(rawText, "ministral-3:3b-cloud")
+    const extracted = await client.extractJobDetails(
+      rawText,
+      "ministral-3:3b-cloud"
+    )
 
     await chrome.storage.local.set({
       [STORAGE_KEYS.PENDING_JOB_DATA]: {
