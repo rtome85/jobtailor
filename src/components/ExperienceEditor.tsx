@@ -132,7 +132,7 @@ export function ExperienceEditor({ experiences, onChange }: ExperienceEditorProp
             showCurrentPosition
             currentPosition={isCurrentPosition}
             onCurrentPositionChange={(isCurrent) =>
-              onUpdate({ ...experience, endDate: isCurrent ? null : experience.endDate })
+              onUpdate({ ...experience, endDate: isCurrent ? null : "" })
             }
           />
         </div>
