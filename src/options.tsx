@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { sendToBackground } from "@plasmohq/messaging"
-import { useStorage } from "@plasmohq/storage/hook"
 
 import { CertificateEditor } from "~components/CertificateEditor"
 import { EducationEditor } from "~components/Education"
@@ -40,74 +39,133 @@ const NAV_GROUPS = [
   {
     label: "AI PROVIDERS",
     items: [
-      { label: "OLLAMA", value: "ai-settings", subtitle: "Configure API access and select your model" },
-      { label: "PERPLEXITY", value: "perplexity", subtitle: "Configure company research and interview preparation" }
+      {
+        label: "OLLAMA",
+        value: "ai-settings",
+        subtitle: "Configure API access and select your model"
+      },
+      {
+        label: "PERPLEXITY",
+        value: "perplexity",
+        subtitle: "Configure company research and interview preparation"
+      }
     ]
   },
   {
     label: "CONTENT",
     items: [
-      { label: "PROMPTS", value: "prompts", subtitle: "Fine-tune model behaviour and custom prompts" },
-      { label: "TEMPLATES", value: "templates", subtitle: "Apply preset prompt configurations" }
+      {
+        label: "PROMPTS",
+        value: "prompts",
+        subtitle: "Fine-tune model behaviour and custom prompts"
+      },
+      {
+        label: "TEMPLATES",
+        value: "templates",
+        subtitle: "Apply preset prompt configurations"
+      }
     ]
   },
   {
     label: "PROFILE",
     items: [
-      { label: "PERSONAL INFO", value: "personal-info", subtitle: "Your contact and personal details" },
-      { label: "EDUCATION", value: "education", subtitle: "Degrees, certificates, and training" },
-      { label: "SKILLS", value: "skills", subtitle: "Technical and soft skills" },
-      { label: "EXPERIENCE", value: "experience", subtitle: "Work history and achievements" },
-      { label: "PROJECTS", value: "projects", subtitle: "Personal and open-source projects" },
-      { label: "LANGUAGES", value: "languages", subtitle: "Languages you speak" }
+      {
+        label: "PERSONAL INFO",
+        value: "personal-info",
+        subtitle: "Your contact and personal details"
+      },
+      {
+        label: "EDUCATION",
+        value: "education",
+        subtitle: "Degrees, certificates, and training"
+      },
+      {
+        label: "SKILLS",
+        value: "skills",
+        subtitle: "Technical and soft skills"
+      },
+      {
+        label: "EXPERIENCE",
+        value: "experience",
+        subtitle: "Work history and achievements"
+      },
+      {
+        label: "PROJECTS",
+        value: "projects",
+        subtitle: "Personal and open-source projects"
+      },
+      {
+        label: "LANGUAGES",
+        value: "languages",
+        subtitle: "Languages you speak"
+      }
     ]
   },
   {
     label: "SYSTEM",
     items: [
-      { label: "BACKUP & SYNC", value: "backup-sync", subtitle: "Export, import, and Google Drive sync" }
+      {
+        label: "BACKUP & SYNC",
+        value: "backup-sync",
+        subtitle: "Export, import, and Google Drive sync"
+      }
     ]
   }
 ]
 
 /**
- * Wraps useStorage with local state so text inputs don't lose cursor position.
- * Edits are immediate in local state and flushed to chrome.storage after a delay.
+ * Manages a chrome.storage.local key with local state so text inputs don't
+ * lose cursor position. Edits are immediate in local state and flushed to
+ * chrome.storage after a delay.
  */
 function useDebouncedStorage<T>(
   key: string,
   defaultValue: T,
   delay = 400
 ): [T, (value: T | ((prev: T) => T)) => void] {
-  const [stored, setStored] = useStorage<T>(key, defaultValue)
-  const [local, setLocal] = useState<T>(stored)
-  const lastWriteId = useRef(0)
+  const [local, setLocal] = useState<T>(defaultValue)
   const pendingWriteId = useRef(0)
+  const lastWriteId = useRef(0)
   const timer = useRef<ReturnType<typeof setTimeout>>()
 
+  // Load initial value from storage
   useEffect(() => {
-    if (stored === undefined) return
-    if (lastWriteId.current === pendingWriteId.current) {
-      setLocal(stored)
-    } else {
-      lastWriteId.current = pendingWriteId.current
+    chrome.storage.local.get(key, (res) => {
+      if (res[key] !== undefined) setLocal(res[key] as T)
+    })
+  }, [key])
+
+  // Sync external storage changes (e.g. from pull)
+  useEffect(() => {
+    const listener = (
+      changes: { [k: string]: chrome.storage.StorageChange },
+      area: string
+    ) => {
+      if (area !== "local" || !(key in changes)) return
+      if (lastWriteId.current === pendingWriteId.current) {
+        setLocal(changes[key].newValue as T)
+      } else {
+        lastWriteId.current = pendingWriteId.current
+      }
     }
-  }, [stored])
+    chrome.storage.onChanged.addListener(listener)
+    return () => chrome.storage.onChanged.removeListener(listener)
+  }, [key])
 
   const setValue = useCallback(
     (value: T | ((prev: T) => T)) => {
       setLocal((prev) => {
-        const next = typeof value === "function" ? (value as (prev: T) => T)(prev) : value
+        const next =
+          typeof value === "function" ? (value as (prev: T) => T)(prev) : value
         if (timer.current) clearTimeout(timer.current)
         pendingWriteId.current += 1
-        const writeId = pendingWriteId.current
         timer.current = setTimeout(() => {
-          setStored(next)
+          chrome.storage.local.set({ [key]: next })
         }, delay)
         return next
       })
     },
-    [setStored, delay]
+    [key, delay]
   )
 
   return [local, setValue]
@@ -164,16 +222,14 @@ function Options() {
     enabled: false
   })
 
-  const [perplexityConfig, setPerplexityConfig] = useDebouncedStorage<PerplexityConfig>(
-    "perplexityConfig",
-    {
+  const [perplexityConfig, setPerplexityConfig] =
+    useDebouncedStorage<PerplexityConfig>("perplexityConfig", {
       apiKey: "",
       enabled: false,
       customPrompt: DEFAULT_PERPLEXITY_PROMPT,
       preparationPlanEnabled: false,
       preparationPlanPrompt: DEFAULT_PREPARATION_PLAN_PROMPT
-    }
-  )
+    })
 
   const [customPrompts, setCustomPrompts] = useDebouncedStorage<CustomPrompts>(
     "customPrompts",
@@ -185,22 +241,17 @@ function Options() {
     DEFAULT_LLM_TUNING
   )
 
-  const [
-    storedPromptsVersion,
-    setStoredPromptsVersion,
-    { isLoading: isVersionLoading }
-  ] = useStorage<string>("promptsVersion", "")
-
   useEffect(() => {
-    if (!isVersionLoading && storedPromptsVersion !== PROMPTS_VERSION) {
-      chrome.storage.local.set({
-        customPrompts: DEFAULT_PROMPTS,
-        promptsVersion: PROMPTS_VERSION
-      })
-      setCustomPrompts(DEFAULT_PROMPTS)
-      setStoredPromptsVersion(PROMPTS_VERSION)
-    }
-  }, [storedPromptsVersion, isVersionLoading])
+    chrome.storage.local.get("promptsVersion", (res) => {
+      if (res.promptsVersion !== PROMPTS_VERSION) {
+        chrome.storage.local.set({
+          customPrompts: DEFAULT_PROMPTS,
+          promptsVersion: PROMPTS_VERSION
+        })
+        setCustomPrompts(DEFAULT_PROMPTS)
+      }
+    })
+  }, [])
 
   const [testStatus, setTestStatus] = useState<{
     type: "idle" | "loading" | "success" | "error"
@@ -214,10 +265,22 @@ function Options() {
 
   const [saveStatus, setSaveStatus] = useState("")
 
-  const [syncConfig, setSyncConfig] = useStorage<SyncConfig | null>(
-    "syncConfig",
-    null
-  )
+  const [syncConfig, setSyncConfigState] = useState<SyncConfig | null>(null)
+  useEffect(() => {
+    chrome.storage.local.get("syncConfig", (res) => {
+      setSyncConfigState(res.syncConfig ?? null)
+    })
+    const listener = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      area: string
+    ) => {
+      if (area === "local" && changes.syncConfig) {
+        setSyncConfigState(changes.syncConfig.newValue ?? null)
+      }
+    }
+    chrome.storage.onChanged.addListener(listener)
+    return () => chrome.storage.onChanged.removeListener(listener)
+  }, [])
   const [syncStatus, setSyncStatus] = useState<{
     type: "idle" | "loading" | "success" | "error"
     message: string
@@ -493,7 +556,9 @@ function Options() {
     setSyncStatus({ type: "loading", message: "Connecting to Google Drive..." })
     try {
       const token = await authorize()
-      await setSyncConfig({ token, lastSynced: null })
+      await chrome.storage.local.set({
+        syncConfig: { token, lastSynced: null }
+      })
       setSyncStatus({
         type: "success",
         message: "Connected! Your data will sync automatically."
@@ -512,10 +577,17 @@ function Options() {
     })
     try {
       await pull(syncConfig.token)
-      await setSyncConfig({
-        ...syncConfig,
-        lastSynced: new Date().toISOString()
+      await chrome.storage.local.set({
+        syncConfig: { ...syncConfig, lastSynced: new Date().toISOString() }
       })
+      const pulled = await chrome.storage.local.get([
+        "userProfile",
+        "ollamaConfig",
+        "perplexityConfig",
+        "customPrompts",
+        "llmTuning"
+      ])
+      await chrome.storage.local.set(pulled)
       setSyncStatus({
         type: "success",
         message: "Data restored from Google Drive!"
@@ -538,7 +610,7 @@ function Options() {
     try {
       await revoke(syncConfig.token)
     } finally {
-      await setSyncConfig(null)
+      await chrome.storage.local.remove("syncConfig")
       setSyncStatus({ type: "idle", message: "" })
     }
   }
@@ -710,7 +782,9 @@ function Options() {
                 Use {"{{companyName}}"} as a placeholder for the company name.
               </p>
               <button
-                onClick={() => openPerplexityDialog("Research Prompt", "research")}
+                onClick={() =>
+                  openPerplexityDialog("Research Prompt", "research")
+                }
                 className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-sidebar-accent text-white border-0 hover:opacity-90 transition-opacity">
                 Expand
               </button>
@@ -763,11 +837,15 @@ function Options() {
                 <div className="flex items-center justify-between mt-1">
                   <p className={hintCls}>
                     Use {"{{companyName}}"}, {"{{jobTitle}}"},{" "}
-                    {"{{jobDescription}}"}, and {"{{interviewType}}"} as placeholders.
+                    {"{{jobDescription}}"}, and {"{{interviewType}}"} as
+                    placeholders.
                   </p>
                   <button
                     onClick={() =>
-                      openPerplexityDialog("Preparation Plan Prompt", "preparation")
+                      openPerplexityDialog(
+                        "Preparation Plan Prompt",
+                        "preparation"
+                      )
                     }
                     className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-sidebar-accent text-white border-0 hover:opacity-90 transition-opacity">
                     Expand
@@ -783,7 +861,8 @@ function Options() {
             </h3>
             <p className="text-xs">
               Perplexity Sonar costs $1 per 1M input tokens and $1 per 1M output
-              tokens. A typical company research query costs approximately $0.0008.
+              tokens. A typical company research query costs approximately
+              $0.0008.
             </p>
           </div>
 
@@ -816,8 +895,8 @@ function Options() {
             <div>
               <h2 className={sectionHeadCls}>LLM Fine-tuning</h2>
               <p className="text-sm text-ink-secondary">
-                Adjust model behaviour and document generation style. Changes apply
-                to the next generation.
+                Adjust model behaviour and document generation style. Changes
+                apply to the next generation.
               </p>
             </div>
             <button
@@ -896,7 +975,9 @@ function Options() {
                       Max Output Tokens
                     </label>
                     <span className="text-sm font-mono font-semibold text-sidebar-accent w-16 text-right">
-                      {(llmTuning ?? DEFAULT_LLM_TUNING).maxTokens.toLocaleString()}
+                      {(
+                        llmTuning ?? DEFAULT_LLM_TUNING
+                      ).maxTokens.toLocaleString()}
                     </span>
                   </div>
                   <input
@@ -931,7 +1012,8 @@ function Options() {
                     Profile Match Strictness
                   </label>
                   <p className="text-[11px] text-ink-muted mb-2">
-                    How rigorously the AI scores your profile against requirements.
+                    How rigorously the AI scores your profile against
+                    requirements.
                   </p>
                   <div className="inline-flex border-2 border-ink overflow-hidden text-sm">
                     {(["strict", "balanced", "generous"] as const).map(
@@ -945,7 +1027,8 @@ function Options() {
                             })
                           }
                           className={`px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors
-                          ${(llmTuning ?? DEFAULT_LLM_TUNING).matchStrictness === opt
+                          ${(llmTuning ?? DEFAULT_LLM_TUNING)
+                              .matchStrictness === opt
                               ? "bg-ink text-white"
                               : "bg-white text-ink hover:bg-canvas"
                             }`}>
@@ -962,7 +1045,8 @@ function Options() {
                     {
                       {
                         strict: "Gaps and missing skills are weighted heavily.",
-                        balanced: "Explicit requirements and transferable skills weighed equally.",
+                        balanced:
+                          "Explicit requirements and transferable skills weighed equally.",
                         generous: "Transferable skills and potential count."
                       }[(llmTuning ?? DEFAULT_LLM_TUNING).matchStrictness]
                     }
@@ -977,25 +1061,26 @@ function Options() {
                     Applies to both resumes and cover letters.
                   </p>
                   <div className="inline-flex border-2 border-ink overflow-hidden text-sm">
-                    {(["formal", "professional", "conversational"] as const).map(
-                      (opt) => (
-                        <button
-                          key={opt}
-                          onClick={() =>
-                            setLlmTuning({
-                              ...(llmTuning ?? DEFAULT_LLM_TUNING),
-                              writingTone: opt
-                            })
-                          }
-                          className={`px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors
-                          ${(llmTuning ?? DEFAULT_LLM_TUNING).writingTone === opt
-                              ? "bg-ink text-white"
-                              : "bg-white text-ink hover:bg-canvas"
-                            }`}>
-                          {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                        </button>
-                      )
-                    )}
+                    {(
+                      ["formal", "professional", "conversational"] as const
+                    ).map((opt) => (
+                      <button
+                        key={opt}
+                        onClick={() =>
+                          setLlmTuning({
+                            ...(llmTuning ?? DEFAULT_LLM_TUNING),
+                            writingTone: opt
+                          })
+                        }
+                        className={`px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors
+                          ${(llmTuning ?? DEFAULT_LLM_TUNING).writingTone ===
+                            opt
+                            ? "bg-ink text-white"
+                            : "bg-white text-ink hover:bg-canvas"
+                          }`}>
+                        {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -1018,7 +1103,8 @@ function Options() {
                             })
                           }
                           className={`px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors
-                          ${(llmTuning ?? DEFAULT_LLM_TUNING).resumeFocus === opt
+                          ${(llmTuning ?? DEFAULT_LLM_TUNING).resumeFocus ===
+                              opt
                               ? "bg-ink text-white"
                               : "bg-white text-ink hover:bg-canvas"
                             }`}>
@@ -1034,7 +1120,6 @@ function Options() {
                 </div>
               </div>
             </div>
-
           </div>
         </div>
 
@@ -1047,9 +1132,7 @@ function Options() {
                 Override the system and user prompts sent to the model.
               </p>
             </div>
-            <button
-              onClick={handleResetPrompts}
-              className={btnOutline}>
+            <button onClick={handleResetPrompts} className={btnOutline}>
               Reset to Defaults
             </button>
           </div>
@@ -1261,8 +1344,8 @@ function Options() {
           <h2 className={sectionHeadCls}>Google Drive Sync</h2>
           <p className="text-sm text-ink-secondary mb-6">
             Sync your profile, settings, and saved applications across
-            computers. Data is stored privately in your Google Drive app
-            folder — only Bespoke can access it.
+            computers. Data is stored privately in your Google Drive app folder
+            — only Bespoke can access it.
           </p>
           <hr className={divider} />
 
@@ -1275,7 +1358,9 @@ function Options() {
                 <ul className="list-disc list-inside space-y-1 text-xs">
                   <li>Connect once per device with your Google account</li>
                   <li>Changes sync automatically after 2 seconds</li>
-                  <li>On a new device, connect and use Force Pull to restore</li>
+                  <li>
+                    On a new device, connect and use Force Pull to restore
+                  </li>
                   <li>
                     Your data is stored in a private app folder, not visible in
                     Drive
@@ -1406,9 +1491,7 @@ function Options() {
             <nav className="flex-1 pt-4 pb-6">
               {NAV_GROUPS.map((group, gi) => (
                 <div key={group.label}>
-                  {gi > 0 && (
-                    <div className="h-px bg-sidebar-hover my-2" />
-                  )}
+                  {gi > 0 && <div className="h-px bg-sidebar-hover my-2" />}
                   <div className="text-sidebar-label text-[10px] font-semibold tracking-[0.1em] px-5 pt-3 pb-1">
                     {group.label}
                   </div>
@@ -1447,7 +1530,6 @@ function Options() {
             <div className="flex-1 overflow-y-auto px-12 pb-12">
               {tabContent[activeTab]}
             </div>
-
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 {
   "name": "bespoke",
   "displayName": "Bespoke",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Tailor your CV to every job",
   "author": "Roberto Tomé <contact@robtome.com>",
   "plasmo": {
@@ -45,7 +45,7 @@
       "notifications"
     ],
     "oauth2": {
-      "client_id": "67775878924-g6v26qab7anr8jf27enoejr1lfo81g03.apps.googleusercontent.com",
+      "client_id": "110025309401-0dhpb6kpq3hb7v16pnasa5aumrdbtaq4.apps.googleusercontent.com",
       "scopes": [
         "https://www.googleapis.com/auth/drive.appdata"
       ]
