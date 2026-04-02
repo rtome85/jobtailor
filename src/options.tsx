@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { sendToBackground } from "@plasmohq/messaging"
-import { Storage } from "@plasmohq/storage"
-import { useStorage } from "@plasmohq/storage/hook"
 
 import { CertificateEditor } from "~components/CertificateEditor"
 import { EducationEditor } from "~components/Education"
@@ -35,7 +33,6 @@ import {
 
 import "./style.css"
 
-const localStorage = new Storage({ area: "local" })
 const EXTENSION_VERSION = chrome.runtime.getManifest().version
 
 const NAV_GROUPS = [
@@ -117,28 +114,43 @@ const NAV_GROUPS = [
 ]
 
 /**
- * Wraps useStorage with local state so text inputs don't lose cursor position.
- * Edits are immediate in local state and flushed to chrome.storage after a delay.
+ * Manages a chrome.storage.local key with local state so text inputs don't
+ * lose cursor position. Edits are immediate in local state and flushed to
+ * chrome.storage after a delay.
  */
 function useDebouncedStorage<T>(
   key: string,
   defaultValue: T,
   delay = 400
 ): [T, (value: T | ((prev: T) => T)) => void] {
-  const [stored, setStored] = useStorage<T>({ key, instance: localStorage }, defaultValue)
-  const [local, setLocal] = useState<T>(stored)
-  const lastWriteId = useRef(0)
+  const [local, setLocal] = useState<T>(defaultValue)
   const pendingWriteId = useRef(0)
+  const lastWriteId = useRef(0)
   const timer = useRef<ReturnType<typeof setTimeout>>()
 
+  // Load initial value from storage
   useEffect(() => {
-    if (stored === undefined) return
-    if (lastWriteId.current === pendingWriteId.current) {
-      setLocal(stored)
-    } else {
-      lastWriteId.current = pendingWriteId.current
+    chrome.storage.local.get(key, (res) => {
+      if (res[key] !== undefined) setLocal(res[key] as T)
+    })
+  }, [key])
+
+  // Sync external storage changes (e.g. from pull)
+  useEffect(() => {
+    const listener = (
+      changes: { [k: string]: chrome.storage.StorageChange },
+      area: string
+    ) => {
+      if (area !== "local" || !(key in changes)) return
+      if (lastWriteId.current === pendingWriteId.current) {
+        setLocal(changes[key].newValue as T)
+      } else {
+        lastWriteId.current = pendingWriteId.current
+      }
     }
-  }, [stored])
+    chrome.storage.onChanged.addListener(listener)
+    return () => chrome.storage.onChanged.removeListener(listener)
+  }, [key])
 
   const setValue = useCallback(
     (value: T | ((prev: T) => T)) => {
@@ -147,14 +159,13 @@ function useDebouncedStorage<T>(
           typeof value === "function" ? (value as (prev: T) => T)(prev) : value
         if (timer.current) clearTimeout(timer.current)
         pendingWriteId.current += 1
-        const writeId = pendingWriteId.current
         timer.current = setTimeout(() => {
-          setStored(next)
+          chrome.storage.local.set({ [key]: next })
         }, delay)
         return next
       })
     },
-    [setStored, delay]
+    [key, delay]
   )
 
   return [local, setValue]
@@ -230,22 +241,17 @@ function Options() {
     DEFAULT_LLM_TUNING
   )
 
-  const [
-    storedPromptsVersion,
-    setStoredPromptsVersion,
-    { isLoading: isVersionLoading }
-  ] = useStorage<string>({ key: "promptsVersion", instance: localStorage }, "")
-
   useEffect(() => {
-    if (!isVersionLoading && storedPromptsVersion !== PROMPTS_VERSION) {
-      chrome.storage.local.set({
-        customPrompts: DEFAULT_PROMPTS,
-        promptsVersion: PROMPTS_VERSION
-      })
-      setCustomPrompts(DEFAULT_PROMPTS)
-      setStoredPromptsVersion(PROMPTS_VERSION)
-    }
-  }, [storedPromptsVersion, isVersionLoading])
+    chrome.storage.local.get("promptsVersion", (res) => {
+      if (res.promptsVersion !== PROMPTS_VERSION) {
+        chrome.storage.local.set({
+          customPrompts: DEFAULT_PROMPTS,
+          promptsVersion: PROMPTS_VERSION
+        })
+        setCustomPrompts(DEFAULT_PROMPTS)
+      }
+    })
+  }, [])
 
   const [testStatus, setTestStatus] = useState<{
     type: "idle" | "loading" | "success" | "error"
@@ -450,11 +456,11 @@ function Options() {
     (t) =>
       t.prompts.resumeSystemPrompt === customPrompts?.resumeSystemPrompt &&
       t.prompts.resumeUserPromptTemplate ===
-        customPrompts?.resumeUserPromptTemplate &&
+      customPrompts?.resumeUserPromptTemplate &&
       t.prompts.coverLetterSystemPrompt ===
-        customPrompts?.coverLetterSystemPrompt &&
+      customPrompts?.coverLetterSystemPrompt &&
       t.prompts.coverLetterUserPromptTemplate ===
-        customPrompts?.coverLetterUserPromptTemplate
+      customPrompts?.coverLetterUserPromptTemplate
   )?.name
 
   const handleApplyTemplate = (template: PromptTemplate) => {
@@ -574,6 +580,14 @@ function Options() {
       await chrome.storage.local.set({
         syncConfig: { ...syncConfig, lastSynced: new Date().toISOString() }
       })
+      const pulled = await chrome.storage.local.get([
+        "userProfile",
+        "ollamaConfig",
+        "perplexityConfig",
+        "customPrompts",
+        "llmTuning"
+      ])
+      await chrome.storage.local.set(pulled)
       setSyncStatus({
         type: "success",
         message: "Data restored from Google Drive!"
@@ -1013,12 +1027,11 @@ function Options() {
                             })
                           }
                           className={`px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors
-                          ${
-                            (llmTuning ?? DEFAULT_LLM_TUNING)
+                          ${(llmTuning ?? DEFAULT_LLM_TUNING)
                               .matchStrictness === opt
                               ? "bg-ink text-white"
                               : "bg-white text-ink hover:bg-canvas"
-                          }`}>
+                            }`}>
                           {opt === "strict"
                             ? "Strict"
                             : opt === "balanced"
@@ -1060,11 +1073,10 @@ function Options() {
                           })
                         }
                         className={`px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors
-                          ${
-                            (llmTuning ?? DEFAULT_LLM_TUNING).writingTone ===
+                          ${(llmTuning ?? DEFAULT_LLM_TUNING).writingTone ===
                             opt
-                              ? "bg-ink text-white"
-                              : "bg-white text-ink hover:bg-canvas"
+                            ? "bg-ink text-white"
+                            : "bg-white text-ink hover:bg-canvas"
                           }`}>
                         {opt.charAt(0).toUpperCase() + opt.slice(1)}
                       </button>
@@ -1091,12 +1103,11 @@ function Options() {
                             })
                           }
                           className={`px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors
-                          ${
-                            (llmTuning ?? DEFAULT_LLM_TUNING).resumeFocus ===
-                            opt
+                          ${(llmTuning ?? DEFAULT_LLM_TUNING).resumeFocus ===
+                              opt
                               ? "bg-ink text-white"
                               : "bg-white text-ink hover:bg-canvas"
-                          }`}>
+                            }`}>
                           {opt === "skills"
                             ? "Skills-first"
                             : opt === "balanced"
@@ -1223,10 +1234,9 @@ function Options() {
                   onClick={() => handleApplyTemplate(template)}
                   disabled={isActive}
                   className={`w-full py-2 text-[11px] font-bold uppercase tracking-widest transition-colors
-                    ${
-                      isActive
-                        ? "bg-canvas text-ink-muted cursor-default border border-canvas-input-border"
-                        : "bg-sidebar-accent text-white border-0 hover:opacity-90"
+                    ${isActive
+                      ? "bg-canvas text-ink-muted cursor-default border border-canvas-input-border"
+                      : "bg-sidebar-accent text-white border-0 hover:opacity-90"
                     }`}>
                   {isActive ? "Applied" : "Apply Template"}
                 </button>
@@ -1491,11 +1501,10 @@ function Options() {
                       <button
                         key={item.value}
                         onClick={() => setActiveTab(item.value)}
-                        className={`block w-full text-left py-[10px] pr-5 pl-[17px] text-[11px] font-semibold tracking-[0.08em] cursor-pointer border-0 border-solid border-l-4 outline-none transition-colors ${
-                          isActive
-                            ? "bg-sidebar-hover text-white border-l-sidebar-accent"
-                            : "bg-transparent text-sidebar-item border-l-transparent"
-                        }`}>
+                        className={`block w-full text-left py-[10px] pr-5 pl-[17px] text-[11px] font-semibold tracking-[0.08em] cursor-pointer border-0 border-solid border-l-4 outline-none transition-colors ${isActive
+                          ? "bg-sidebar-hover text-white border-l-sidebar-accent"
+                          : "bg-transparent text-sidebar-item border-l-transparent"
+                          }`}>
                         {item.label}
                       </button>
                     )

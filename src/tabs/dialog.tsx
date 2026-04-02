@@ -2020,9 +2020,9 @@ function IndexDialog() {
 
             <div className="border-t border-canvas-divide pt-4">
               <p className="text-[12px] text-ink-muted">
-                Profile: {userProfile.skills.length} skills,{" "}
-                {userProfile.workExperience.length} experiences,{" "}
-                {userProfile.personalProjects.length} projects,{" "}
+                Profile: {userProfile.skills?.length ?? 0} skills,{" "}
+                {userProfile.workExperience?.length ?? 0} experiences,{" "}
+                {userProfile.personalProjects?.length ?? 0} projects,{" "}
                 {userProfile.languages?.length ?? 0} languages
               </p>
             </div>
