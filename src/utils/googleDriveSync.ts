@@ -42,10 +42,10 @@ async function findFile(token: string): Promise<string | null> {
 
 async function push(token: string): Promise<void> {
   const data = await chrome.storage.local.get(SYNC_KEYS as unknown as string[])
+  if (Object.keys(data).length === 0) return
 
   const metadata = { name: FILE_NAME, parents: ["appDataFolder"] }
   const body = JSON.stringify(data)
-
   const existingId = await findFile(token)
 
   if (existingId) {
@@ -92,7 +92,6 @@ async function push(token: string): Promise<void> {
 async function pull(token: string): Promise<void> {
   const fileId = await findFile(token)
   if (!fileId) return // Nothing to restore yet
-
   const res = await fetch(`${DRIVE_API}/files/${fileId}?alt=media`, {
     headers: { Authorization: `Bearer ${token}` }
   })

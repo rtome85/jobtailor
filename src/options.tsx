@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { sendToBackground } from "@plasmohq/messaging"
+import { Storage } from "@plasmohq/storage"
 import { useStorage } from "@plasmohq/storage/hook"
 
 import { CertificateEditor } from "~components/CertificateEditor"
@@ -34,38 +35,83 @@ import {
 
 import "./style.css"
 
+const localStorage = new Storage({ area: "local" })
 const EXTENSION_VERSION = chrome.runtime.getManifest().version
 
 const NAV_GROUPS = [
   {
     label: "AI PROVIDERS",
     items: [
-      { label: "OLLAMA", value: "ai-settings", subtitle: "Configure API access and select your model" },
-      { label: "PERPLEXITY", value: "perplexity", subtitle: "Configure company research and interview preparation" }
+      {
+        label: "OLLAMA",
+        value: "ai-settings",
+        subtitle: "Configure API access and select your model"
+      },
+      {
+        label: "PERPLEXITY",
+        value: "perplexity",
+        subtitle: "Configure company research and interview preparation"
+      }
     ]
   },
   {
     label: "CONTENT",
     items: [
-      { label: "PROMPTS", value: "prompts", subtitle: "Fine-tune model behaviour and custom prompts" },
-      { label: "TEMPLATES", value: "templates", subtitle: "Apply preset prompt configurations" }
+      {
+        label: "PROMPTS",
+        value: "prompts",
+        subtitle: "Fine-tune model behaviour and custom prompts"
+      },
+      {
+        label: "TEMPLATES",
+        value: "templates",
+        subtitle: "Apply preset prompt configurations"
+      }
     ]
   },
   {
     label: "PROFILE",
     items: [
-      { label: "PERSONAL INFO", value: "personal-info", subtitle: "Your contact and personal details" },
-      { label: "EDUCATION", value: "education", subtitle: "Degrees, certificates, and training" },
-      { label: "SKILLS", value: "skills", subtitle: "Technical and soft skills" },
-      { label: "EXPERIENCE", value: "experience", subtitle: "Work history and achievements" },
-      { label: "PROJECTS", value: "projects", subtitle: "Personal and open-source projects" },
-      { label: "LANGUAGES", value: "languages", subtitle: "Languages you speak" }
+      {
+        label: "PERSONAL INFO",
+        value: "personal-info",
+        subtitle: "Your contact and personal details"
+      },
+      {
+        label: "EDUCATION",
+        value: "education",
+        subtitle: "Degrees, certificates, and training"
+      },
+      {
+        label: "SKILLS",
+        value: "skills",
+        subtitle: "Technical and soft skills"
+      },
+      {
+        label: "EXPERIENCE",
+        value: "experience",
+        subtitle: "Work history and achievements"
+      },
+      {
+        label: "PROJECTS",
+        value: "projects",
+        subtitle: "Personal and open-source projects"
+      },
+      {
+        label: "LANGUAGES",
+        value: "languages",
+        subtitle: "Languages you speak"
+      }
     ]
   },
   {
     label: "SYSTEM",
     items: [
-      { label: "BACKUP & SYNC", value: "backup-sync", subtitle: "Export, import, and Google Drive sync" }
+      {
+        label: "BACKUP & SYNC",
+        value: "backup-sync",
+        subtitle: "Export, import, and Google Drive sync"
+      }
     ]
   }
 ]
@@ -79,7 +125,7 @@ function useDebouncedStorage<T>(
   defaultValue: T,
   delay = 400
 ): [T, (value: T | ((prev: T) => T)) => void] {
-  const [stored, setStored] = useStorage<T>(key, defaultValue)
+  const [stored, setStored] = useStorage<T>({ key, instance: localStorage }, defaultValue)
   const [local, setLocal] = useState<T>(stored)
   const lastWriteId = useRef(0)
   const pendingWriteId = useRef(0)
@@ -97,7 +143,8 @@ function useDebouncedStorage<T>(
   const setValue = useCallback(
     (value: T | ((prev: T) => T)) => {
       setLocal((prev) => {
-        const next = typeof value === "function" ? (value as (prev: T) => T)(prev) : value
+        const next =
+          typeof value === "function" ? (value as (prev: T) => T)(prev) : value
         if (timer.current) clearTimeout(timer.current)
         pendingWriteId.current += 1
         const writeId = pendingWriteId.current
@@ -164,16 +211,14 @@ function Options() {
     enabled: false
   })
 
-  const [perplexityConfig, setPerplexityConfig] = useDebouncedStorage<PerplexityConfig>(
-    "perplexityConfig",
-    {
+  const [perplexityConfig, setPerplexityConfig] =
+    useDebouncedStorage<PerplexityConfig>("perplexityConfig", {
       apiKey: "",
       enabled: false,
       customPrompt: DEFAULT_PERPLEXITY_PROMPT,
       preparationPlanEnabled: false,
       preparationPlanPrompt: DEFAULT_PREPARATION_PLAN_PROMPT
-    }
-  )
+    })
 
   const [customPrompts, setCustomPrompts] = useDebouncedStorage<CustomPrompts>(
     "customPrompts",
@@ -189,7 +234,7 @@ function Options() {
     storedPromptsVersion,
     setStoredPromptsVersion,
     { isLoading: isVersionLoading }
-  ] = useStorage<string>("promptsVersion", "")
+  ] = useStorage<string>({ key: "promptsVersion", instance: localStorage }, "")
 
   useEffect(() => {
     if (!isVersionLoading && storedPromptsVersion !== PROMPTS_VERSION) {
@@ -214,10 +259,22 @@ function Options() {
 
   const [saveStatus, setSaveStatus] = useState("")
 
-  const [syncConfig, setSyncConfig] = useStorage<SyncConfig | null>(
-    "syncConfig",
-    null
-  )
+  const [syncConfig, setSyncConfigState] = useState<SyncConfig | null>(null)
+  useEffect(() => {
+    chrome.storage.local.get("syncConfig", (res) => {
+      setSyncConfigState(res.syncConfig ?? null)
+    })
+    const listener = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      area: string
+    ) => {
+      if (area === "local" && changes.syncConfig) {
+        setSyncConfigState(changes.syncConfig.newValue ?? null)
+      }
+    }
+    chrome.storage.onChanged.addListener(listener)
+    return () => chrome.storage.onChanged.removeListener(listener)
+  }, [])
   const [syncStatus, setSyncStatus] = useState<{
     type: "idle" | "loading" | "success" | "error"
     message: string
@@ -393,11 +450,11 @@ function Options() {
     (t) =>
       t.prompts.resumeSystemPrompt === customPrompts?.resumeSystemPrompt &&
       t.prompts.resumeUserPromptTemplate ===
-      customPrompts?.resumeUserPromptTemplate &&
+        customPrompts?.resumeUserPromptTemplate &&
       t.prompts.coverLetterSystemPrompt ===
-      customPrompts?.coverLetterSystemPrompt &&
+        customPrompts?.coverLetterSystemPrompt &&
       t.prompts.coverLetterUserPromptTemplate ===
-      customPrompts?.coverLetterUserPromptTemplate
+        customPrompts?.coverLetterUserPromptTemplate
   )?.name
 
   const handleApplyTemplate = (template: PromptTemplate) => {
@@ -493,7 +550,9 @@ function Options() {
     setSyncStatus({ type: "loading", message: "Connecting to Google Drive..." })
     try {
       const token = await authorize()
-      await setSyncConfig({ token, lastSynced: null })
+      await chrome.storage.local.set({
+        syncConfig: { token, lastSynced: null }
+      })
       setSyncStatus({
         type: "success",
         message: "Connected! Your data will sync automatically."
@@ -512,9 +571,8 @@ function Options() {
     })
     try {
       await pull(syncConfig.token)
-      await setSyncConfig({
-        ...syncConfig,
-        lastSynced: new Date().toISOString()
+      await chrome.storage.local.set({
+        syncConfig: { ...syncConfig, lastSynced: new Date().toISOString() }
       })
       setSyncStatus({
         type: "success",
@@ -538,7 +596,7 @@ function Options() {
     try {
       await revoke(syncConfig.token)
     } finally {
-      await setSyncConfig(null)
+      await chrome.storage.local.remove("syncConfig")
       setSyncStatus({ type: "idle", message: "" })
     }
   }
@@ -710,7 +768,9 @@ function Options() {
                 Use {"{{companyName}}"} as a placeholder for the company name.
               </p>
               <button
-                onClick={() => openPerplexityDialog("Research Prompt", "research")}
+                onClick={() =>
+                  openPerplexityDialog("Research Prompt", "research")
+                }
                 className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-sidebar-accent text-white border-0 hover:opacity-90 transition-opacity">
                 Expand
               </button>
@@ -763,11 +823,15 @@ function Options() {
                 <div className="flex items-center justify-between mt-1">
                   <p className={hintCls}>
                     Use {"{{companyName}}"}, {"{{jobTitle}}"},{" "}
-                    {"{{jobDescription}}"}, and {"{{interviewType}}"} as placeholders.
+                    {"{{jobDescription}}"}, and {"{{interviewType}}"} as
+                    placeholders.
                   </p>
                   <button
                     onClick={() =>
-                      openPerplexityDialog("Preparation Plan Prompt", "preparation")
+                      openPerplexityDialog(
+                        "Preparation Plan Prompt",
+                        "preparation"
+                      )
                     }
                     className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-sidebar-accent text-white border-0 hover:opacity-90 transition-opacity">
                     Expand
@@ -783,7 +847,8 @@ function Options() {
             </h3>
             <p className="text-xs">
               Perplexity Sonar costs $1 per 1M input tokens and $1 per 1M output
-              tokens. A typical company research query costs approximately $0.0008.
+              tokens. A typical company research query costs approximately
+              $0.0008.
             </p>
           </div>
 
@@ -816,8 +881,8 @@ function Options() {
             <div>
               <h2 className={sectionHeadCls}>LLM Fine-tuning</h2>
               <p className="text-sm text-ink-secondary">
-                Adjust model behaviour and document generation style. Changes apply
-                to the next generation.
+                Adjust model behaviour and document generation style. Changes
+                apply to the next generation.
               </p>
             </div>
             <button
@@ -896,7 +961,9 @@ function Options() {
                       Max Output Tokens
                     </label>
                     <span className="text-sm font-mono font-semibold text-sidebar-accent w-16 text-right">
-                      {(llmTuning ?? DEFAULT_LLM_TUNING).maxTokens.toLocaleString()}
+                      {(
+                        llmTuning ?? DEFAULT_LLM_TUNING
+                      ).maxTokens.toLocaleString()}
                     </span>
                   </div>
                   <input
@@ -931,7 +998,8 @@ function Options() {
                     Profile Match Strictness
                   </label>
                   <p className="text-[11px] text-ink-muted mb-2">
-                    How rigorously the AI scores your profile against requirements.
+                    How rigorously the AI scores your profile against
+                    requirements.
                   </p>
                   <div className="inline-flex border-2 border-ink overflow-hidden text-sm">
                     {(["strict", "balanced", "generous"] as const).map(
@@ -945,10 +1013,12 @@ function Options() {
                             })
                           }
                           className={`px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors
-                          ${(llmTuning ?? DEFAULT_LLM_TUNING).matchStrictness === opt
+                          ${
+                            (llmTuning ?? DEFAULT_LLM_TUNING)
+                              .matchStrictness === opt
                               ? "bg-ink text-white"
                               : "bg-white text-ink hover:bg-canvas"
-                            }`}>
+                          }`}>
                           {opt === "strict"
                             ? "Strict"
                             : opt === "balanced"
@@ -962,7 +1032,8 @@ function Options() {
                     {
                       {
                         strict: "Gaps and missing skills are weighted heavily.",
-                        balanced: "Explicit requirements and transferable skills weighed equally.",
+                        balanced:
+                          "Explicit requirements and transferable skills weighed equally.",
                         generous: "Transferable skills and potential count."
                       }[(llmTuning ?? DEFAULT_LLM_TUNING).matchStrictness]
                     }
@@ -977,25 +1048,27 @@ function Options() {
                     Applies to both resumes and cover letters.
                   </p>
                   <div className="inline-flex border-2 border-ink overflow-hidden text-sm">
-                    {(["formal", "professional", "conversational"] as const).map(
-                      (opt) => (
-                        <button
-                          key={opt}
-                          onClick={() =>
-                            setLlmTuning({
-                              ...(llmTuning ?? DEFAULT_LLM_TUNING),
-                              writingTone: opt
-                            })
-                          }
-                          className={`px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors
-                          ${(llmTuning ?? DEFAULT_LLM_TUNING).writingTone === opt
+                    {(
+                      ["formal", "professional", "conversational"] as const
+                    ).map((opt) => (
+                      <button
+                        key={opt}
+                        onClick={() =>
+                          setLlmTuning({
+                            ...(llmTuning ?? DEFAULT_LLM_TUNING),
+                            writingTone: opt
+                          })
+                        }
+                        className={`px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors
+                          ${
+                            (llmTuning ?? DEFAULT_LLM_TUNING).writingTone ===
+                            opt
                               ? "bg-ink text-white"
                               : "bg-white text-ink hover:bg-canvas"
-                            }`}>
-                          {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                        </button>
-                      )
-                    )}
+                          }`}>
+                        {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -1018,10 +1091,12 @@ function Options() {
                             })
                           }
                           className={`px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors
-                          ${(llmTuning ?? DEFAULT_LLM_TUNING).resumeFocus === opt
+                          ${
+                            (llmTuning ?? DEFAULT_LLM_TUNING).resumeFocus ===
+                            opt
                               ? "bg-ink text-white"
                               : "bg-white text-ink hover:bg-canvas"
-                            }`}>
+                          }`}>
                           {opt === "skills"
                             ? "Skills-first"
                             : opt === "balanced"
@@ -1034,7 +1109,6 @@ function Options() {
                 </div>
               </div>
             </div>
-
           </div>
         </div>
 
@@ -1047,9 +1121,7 @@ function Options() {
                 Override the system and user prompts sent to the model.
               </p>
             </div>
-            <button
-              onClick={handleResetPrompts}
-              className={btnOutline}>
+            <button onClick={handleResetPrompts} className={btnOutline}>
               Reset to Defaults
             </button>
           </div>
@@ -1151,9 +1223,10 @@ function Options() {
                   onClick={() => handleApplyTemplate(template)}
                   disabled={isActive}
                   className={`w-full py-2 text-[11px] font-bold uppercase tracking-widest transition-colors
-                    ${isActive
-                      ? "bg-canvas text-ink-muted cursor-default border border-canvas-input-border"
-                      : "bg-sidebar-accent text-white border-0 hover:opacity-90"
+                    ${
+                      isActive
+                        ? "bg-canvas text-ink-muted cursor-default border border-canvas-input-border"
+                        : "bg-sidebar-accent text-white border-0 hover:opacity-90"
                     }`}>
                   {isActive ? "Applied" : "Apply Template"}
                 </button>
@@ -1261,8 +1334,8 @@ function Options() {
           <h2 className={sectionHeadCls}>Google Drive Sync</h2>
           <p className="text-sm text-ink-secondary mb-6">
             Sync your profile, settings, and saved applications across
-            computers. Data is stored privately in your Google Drive app
-            folder — only Bespoke can access it.
+            computers. Data is stored privately in your Google Drive app folder
+            — only Bespoke can access it.
           </p>
           <hr className={divider} />
 
@@ -1275,7 +1348,9 @@ function Options() {
                 <ul className="list-disc list-inside space-y-1 text-xs">
                   <li>Connect once per device with your Google account</li>
                   <li>Changes sync automatically after 2 seconds</li>
-                  <li>On a new device, connect and use Force Pull to restore</li>
+                  <li>
+                    On a new device, connect and use Force Pull to restore
+                  </li>
                   <li>
                     Your data is stored in a private app folder, not visible in
                     Drive
@@ -1406,9 +1481,7 @@ function Options() {
             <nav className="flex-1 pt-4 pb-6">
               {NAV_GROUPS.map((group, gi) => (
                 <div key={group.label}>
-                  {gi > 0 && (
-                    <div className="h-px bg-sidebar-hover my-2" />
-                  )}
+                  {gi > 0 && <div className="h-px bg-sidebar-hover my-2" />}
                   <div className="text-sidebar-label text-[10px] font-semibold tracking-[0.1em] px-5 pt-3 pb-1">
                     {group.label}
                   </div>
@@ -1418,10 +1491,11 @@ function Options() {
                       <button
                         key={item.value}
                         onClick={() => setActiveTab(item.value)}
-                        className={`block w-full text-left py-[10px] pr-5 pl-[17px] text-[11px] font-semibold tracking-[0.08em] cursor-pointer border-0 border-solid border-l-4 outline-none transition-colors ${isActive
-                          ? "bg-sidebar-hover text-white border-l-sidebar-accent"
-                          : "bg-transparent text-sidebar-item border-l-transparent"
-                          }`}>
+                        className={`block w-full text-left py-[10px] pr-5 pl-[17px] text-[11px] font-semibold tracking-[0.08em] cursor-pointer border-0 border-solid border-l-4 outline-none transition-colors ${
+                          isActive
+                            ? "bg-sidebar-hover text-white border-l-sidebar-accent"
+                            : "bg-transparent text-sidebar-item border-l-transparent"
+                        }`}>
                         {item.label}
                       </button>
                     )
@@ -1447,7 +1521,6 @@ function Options() {
             <div className="flex-1 overflow-y-auto px-12 pb-12">
               {tabContent[activeTab]}
             </div>
-
           </div>
         </div>
       </div>

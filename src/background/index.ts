@@ -1,7 +1,9 @@
+import {
+  createContextMenu,
+  handleContextMenuClick
+} from "~background/context-menu"
 import { SYNC_KEYS } from "~storage/keys"
 import { push } from "~utils/googleDriveSync"
-
-import { createContextMenu, handleContextMenuClick } from "~background/context-menu"
 
 // MV3: must be registered at top-level so it persists across service worker restarts
 chrome.contextMenus.onClicked.addListener(handleContextMenuClick)
@@ -36,15 +38,21 @@ chrome.storage.onChanged.addListener((changes, area) => {
     if (!syncConfig?.token) return
     try {
       await enqueuePush(() => push(syncConfig.token))
-      const { syncConfig: current } = await chrome.storage.local.get("syncConfig")
+      const { syncConfig: current } =
+        await chrome.storage.local.get("syncConfig")
       if (current?.token === syncConfig.token) {
         await chrome.storage.local.set({
-          syncConfig: { ...current, lastSynced: new Date().toISOString(), error: undefined }
+          syncConfig: {
+            ...current,
+            lastSynced: new Date().toISOString(),
+            error: undefined
+          }
         })
       }
     } catch (err) {
       // Mark sync error (token may be expired)
-      const { syncConfig: current } = await chrome.storage.local.get("syncConfig")
+      const { syncConfig: current } =
+        await chrome.storage.local.get("syncConfig")
       if (current?.token === syncConfig.token) {
         await chrome.storage.local.set({
           syncConfig: { ...current, error: (err as Error).message }
