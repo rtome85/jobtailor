@@ -17,9 +17,8 @@ function showExtractionError() {
   chrome.notifications.create({
     type: "basic",
     iconUrl: chrome.runtime.getURL(iconPath),
-    title: "Não foi possível extrair os detalhes",
-    message:
-      "Seleciona o texto da oferta de trabalho, clica com o botão direito e tenta novamente."
+    title: "Unable to extract the details",
+    message: "Select the job posting text, right-click and try again."
   })
 }
 

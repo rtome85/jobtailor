@@ -160,7 +160,13 @@ interface GenerationResult {
   }
 }
 
-type View = "form" | "loading" | "success" | "saveForm" | "applicationsList" | "extracting"
+type View =
+  | "form"
+  | "loading"
+  | "success"
+  | "saveForm"
+  | "applicationsList"
+  | "extracting"
 
 function statusTextClass(status: ApplicationStatus): string {
   switch (status) {
@@ -281,7 +287,7 @@ function IndexDialog() {
     const applyData = (data: Record<string, unknown> | null) => {
       if (!data || data.extracting) return
       if (data.error) {
-        setStatus("Não foi possível extrair os detalhes. Preenche manualmente.")
+        setStatus("Unable to extract the details. Please fill in manually.")
         setView("form")
         return
       }
@@ -291,7 +297,9 @@ function IndexDialog() {
       setView("form")
     }
 
-    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
+    const listener = (
+      changes: Record<string, chrome.storage.StorageChange>
+    ) => {
       const change = changes["pendingJobData"]
       if (change) applyData(change.newValue)
     }
@@ -299,7 +307,9 @@ function IndexDialog() {
     chrome.storage.onChanged.addListener(listener)
 
     // Handle race: extraction may have completed before listener was registered
-    chrome.storage.local.get("pendingJobData", (res) => applyData(res.pendingJobData))
+    chrome.storage.local.get("pendingJobData", (res) =>
+      applyData(res.pendingJobData)
+    )
 
     return () => chrome.storage.onChanged.removeListener(listener)
   }, [view])
@@ -509,25 +519,25 @@ function IndexDialog() {
             ratings: {
               glassdoor: cleanRating(
                 ratingsObj.glassdoor ??
-                getField(
-                  raw,
-                  "glassdoor",
-                  "Glassdoor Rating",
-                  "glassdoor_rating"
-                )
+                  getField(
+                    raw,
+                    "glassdoor",
+                    "Glassdoor Rating",
+                    "glassdoor_rating"
+                  )
               ),
               indeed: cleanRating(
                 ratingsObj.indeed ??
-                getField(raw, "indeed", "Indeed Rating", "indeed_rating")
+                  getField(raw, "indeed", "Indeed Rating", "indeed_rating")
               ),
               teamlyzer: cleanRating(
                 ratingsObj.teamlyzer ??
-                getField(
-                  raw,
-                  "teamlyzer",
-                  "Teamlyzer Rating",
-                  "Overall Teamlyzer Rating"
-                )
+                  getField(
+                    raw,
+                    "teamlyzer",
+                    "Teamlyzer Rating",
+                    "Overall Teamlyzer Rating"
+                  )
               )
             },
             sources: []
@@ -640,11 +650,11 @@ function IndexDialog() {
     const docs =
       !editingApplication && result && saveDocs
         ? {
-          resumeContent: result.resumeContent,
-          resumeFilename: result.resumeFilename,
-          coverLetterContent: result.coverLetterContent,
-          coverLetterFilename: result.coverLetterFilename
-        }
+            resumeContent: result.resumeContent,
+            resumeFilename: result.resumeFilename,
+            coverLetterContent: result.coverLetterContent,
+            coverLetterFilename: result.coverLetterFilename
+          }
         : {}
 
     const matchData =
@@ -654,27 +664,27 @@ function IndexDialog() {
 
     const updated: SavedApplication[] = editingApplication
       ? savedApplications.map((a) =>
-        a.id === editingApplication.id
-          ? {
-            ...a,
+          a.id === editingApplication.id
+            ? {
+                ...a,
+                ...saveFormData,
+                jobUrl: saveFormData.jobUrl || undefined,
+                // Preserve existing preparation plan
+                preparationPlan: a.preparationPlan
+              }
+            : a
+        )
+      : [
+          ...savedApplications,
+          {
             ...saveFormData,
             jobUrl: saveFormData.jobUrl || undefined,
-            // Preserve existing preparation plan
-            preparationPlan: a.preparationPlan
+            ...docs,
+            ...matchData,
+            id: crypto.randomUUID(),
+            createdAt: new Date().toISOString()
           }
-          : a
-      )
-      : [
-        ...savedApplications,
-        {
-          ...saveFormData,
-          jobUrl: saveFormData.jobUrl || undefined,
-          ...docs,
-          ...matchData,
-          id: crypto.randomUUID(),
-          createdAt: new Date().toISOString()
-        }
-      ]
+        ]
     chrome.storage.local.set({ savedApplications: updated })
     setSavedApplications(updated)
     setView("applicationsList")
@@ -747,16 +757,16 @@ function IndexDialog() {
     const updated: SavedApplication[] = savedApplications.map((a) =>
       a.id === editingApplication.id
         ? {
-          ...a,
-          preparationPlan: {
-            content: preparationPlanContent,
-            generatedAt: new Date().toISOString(),
-            interviewType: saveFormData.status as
-              | "HR Interview"
-              | "1st Technical Interview"
-              | "2nd Technical Interview"
+            ...a,
+            preparationPlan: {
+              content: preparationPlanContent,
+              generatedAt: new Date().toISOString(),
+              interviewType: saveFormData.status as
+                | "HR Interview"
+                | "1st Technical Interview"
+                | "2nd Technical Interview"
+            }
           }
-        }
         : a
     )
 
@@ -802,10 +812,14 @@ function IndexDialog() {
             <h2 className="text-[20px] font-bold tracking-[0.1em] text-ink uppercase">
               Crafting your report…
             </h2>
-            <p className="text-[13px] text-ink-secondary">This may take a minute</p>
+            <p className="text-[13px] text-ink-secondary">
+              This may take a minute
+            </p>
           </div>
 
-          <div className="w-full bg-canvas-divide h-[10px]" style={{ borderRadius: 2 }}>
+          <div
+            className="w-full bg-canvas-divide h-[10px]"
+            style={{ borderRadius: 2 }}>
             <div
               className="h-[10px] bg-sidebar-accent transition-all duration-300 ease-out"
               style={{ width: `${progress}%`, borderRadius: 2 }}
@@ -852,12 +866,9 @@ function IndexDialog() {
         <div className="flex-1 overflow-y-auto px-12 py-10 flex flex-col gap-6">
           {/* Hero */}
 
-
           <h2 className="text-[28px] font-bold tracking-[0.05em] text-ink uppercase">
             Your Report Is Ready!
           </h2>
-
-
 
           {/* Match Card */}
           <div className="bg-white border-2 border-ink p-6 flex flex-col gap-4">
@@ -865,12 +876,20 @@ function IndexDialog() {
               <span className="text-[11px] font-bold tracking-[0.15em] text-ink uppercase">
                 Match Score
               </span>
-              <span className={`text-[22px] font-bold ${pct >= 85 ? "text-sidebar-accent" : pct >= 70 ? "text-ink" : "text-ink-secondary"
+              <span
+                className={`text-[22px] font-bold ${
+                  pct >= 85
+                    ? "text-sidebar-accent"
+                    : pct >= 70
+                      ? "text-ink"
+                      : "text-ink-secondary"
                 }`}>
                 {pct}%
               </span>
             </div>
-            <div className="w-full bg-canvas-divide h-[10px]" style={{ borderRadius: 2 }}>
+            <div
+              className="w-full bg-canvas-divide h-[10px]"
+              style={{ borderRadius: 2 }}>
               <div
                 className="h-[10px] bg-sidebar-accent transition-all duration-700"
                 style={{ width: `${pct}%`, borderRadius: 2 }}
@@ -886,37 +905,41 @@ function IndexDialog() {
           {/* Strengths / Weaknesses Row */}
           {((result.match.strengths?.length ?? 0) > 0 ||
             (result.match.weaknesses?.length ?? 0) > 0) && (
-              <div className="flex gap-4">
-                {(result.match.strengths?.length ?? 0) > 0 && (
-                  <div className="flex-1 bg-[#EDF5ED] border-2 border-[#2D6A2D] p-5 flex flex-col gap-[10px]">
-                    <p className="text-[10px] font-bold tracking-[0.15em] text-[#2D6A2D] uppercase">
-                      Strengths
-                    </p>
-                    <ul className="flex flex-col gap-[6px]">
-                      {result.match.strengths.map((s, i) => (
-                        <li key={i} className="text-[12px] text-ink leading-[1.5]">
-                          ✓&nbsp;&nbsp;{s}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {(result.match.weaknesses?.length ?? 0) > 0 && (
-                  <div className="flex-1 bg-[#FDEAE4] border-2 border-sidebar-accent p-5 flex flex-col gap-[10px]">
-                    <p className="text-[10px] font-bold tracking-[0.15em] text-sidebar-accent uppercase">
-                      Weaknesses
-                    </p>
-                    <ul className="flex flex-col gap-[6px]">
-                      {result.match.weaknesses.map((w, i) => (
-                        <li key={i} className="text-[12px] text-ink leading-[1.5]">
-                          ×&nbsp;&nbsp;{w}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="flex gap-4">
+              {(result.match.strengths?.length ?? 0) > 0 && (
+                <div className="flex-1 bg-[#EDF5ED] border-2 border-[#2D6A2D] p-5 flex flex-col gap-[10px]">
+                  <p className="text-[10px] font-bold tracking-[0.15em] text-[#2D6A2D] uppercase">
+                    Strengths
+                  </p>
+                  <ul className="flex flex-col gap-[6px]">
+                    {result.match.strengths.map((s, i) => (
+                      <li
+                        key={i}
+                        className="text-[12px] text-ink leading-[1.5]">
+                        ✓&nbsp;&nbsp;{s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {(result.match.weaknesses?.length ?? 0) > 0 && (
+                <div className="flex-1 bg-[#FDEAE4] border-2 border-sidebar-accent p-5 flex flex-col gap-[10px]">
+                  <p className="text-[10px] font-bold tracking-[0.15em] text-sidebar-accent uppercase">
+                    Weaknesses
+                  </p>
+                  <ul className="flex flex-col gap-[6px]">
+                    {result.match.weaknesses.map((w, i) => (
+                      <li
+                        key={i}
+                        className="text-[12px] text-ink leading-[1.5]">
+                        ×&nbsp;&nbsp;{w}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Improvements Card */}
           {(result.match.improvements?.length ?? 0) > 0 && (
@@ -1004,39 +1027,54 @@ function IndexDialog() {
                     {(companyInfo.ratings.glassdoor ||
                       companyInfo.ratings.indeed ||
                       companyInfo.ratings.teamlyzer) && (
-                        <div className="flex flex-wrap gap-2">
-                          {companyInfo.ratings.glassdoor && (
+                      <div className="flex flex-wrap gap-2">
+                        {companyInfo.ratings.glassdoor && (
+                          <span
+                            className="inline-flex items-center gap-1 bg-[#F0EDE8] border border-[#D4CEC5] px-[10px] py-[6px] text-[11px]"
+                            style={{ borderRadius: 2 }}>
+                            <span className="text-[#555555]">Glassdoor</span>
                             <span
-                              className="inline-flex items-center gap-1 bg-[#F0EDE8] border border-[#D4CEC5] px-[10px] py-[6px] text-[11px]"
-                              style={{ borderRadius: 2 }}>
-                              <span className="text-[#555555]">Glassdoor</span>
-                              <span className={companyInfo.ratings.glassdoor >= 3.5 ? "text-green-600" : "text-red-600"}>
-                                {companyInfo.ratings.glassdoor}★
-                              </span>
+                              className={
+                                companyInfo.ratings.glassdoor >= 3.5
+                                  ? "text-green-600"
+                                  : "text-red-600"
+                              }>
+                              {companyInfo.ratings.glassdoor}★
                             </span>
-                          )}
-                          {companyInfo.ratings.indeed && (
+                          </span>
+                        )}
+                        {companyInfo.ratings.indeed && (
+                          <span
+                            className="inline-flex items-center gap-1 bg-[#F0EDE8] border border-[#D4CEC5] px-[10px] py-[6px] text-[11px]"
+                            style={{ borderRadius: 2 }}>
+                            <span className="text-[#555555]">Indeed</span>
                             <span
-                              className="inline-flex items-center gap-1 bg-[#F0EDE8] border border-[#D4CEC5] px-[10px] py-[6px] text-[11px]"
-                              style={{ borderRadius: 2 }}>
-                              <span className="text-[#555555]">Indeed</span>
-                              <span className={companyInfo.ratings.indeed >= 3.5 ? "text-green-600" : "text-red-600"}>
-                                {companyInfo.ratings.indeed}★
-                              </span>
+                              className={
+                                companyInfo.ratings.indeed >= 3.5
+                                  ? "text-green-600"
+                                  : "text-red-600"
+                              }>
+                              {companyInfo.ratings.indeed}★
                             </span>
-                          )}
-                          {companyInfo.ratings.teamlyzer && (
+                          </span>
+                        )}
+                        {companyInfo.ratings.teamlyzer && (
+                          <span
+                            className="inline-flex items-center gap-1 bg-[#F0EDE8] border border-[#D4CEC5] px-[10px] py-[6px] text-[11px]"
+                            style={{ borderRadius: 2 }}>
+                            <span className="text-[#555555]">Teamlyzer</span>
                             <span
-                              className="inline-flex items-center gap-1 bg-[#F0EDE8] border border-[#D4CEC5] px-[10px] py-[6px] text-[11px]"
-                              style={{ borderRadius: 2 }}>
-                              <span className="text-[#555555]">Teamlyzer</span>
-                              <span className={companyInfo.ratings.teamlyzer >= 3.5 ? "text-green-600" : "text-red-600"}>
-                                {companyInfo.ratings.teamlyzer}★
-                              </span>
+                              className={
+                                companyInfo.ratings.teamlyzer >= 3.5
+                                  ? "text-green-600"
+                                  : "text-red-600"
+                              }>
+                              {companyInfo.ratings.teamlyzer}★
                             </span>
-                          )}
-                        </div>
-                      )}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </>
                 )
               )}
@@ -1052,7 +1090,12 @@ function IndexDialog() {
               </span>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => downloadMarkdownFile(result.resumeFilename, result.resumeContent)}
+                  onClick={() =>
+                    downloadMarkdownFile(
+                      result.resumeFilename,
+                      result.resumeContent
+                    )
+                  }
                   className="flex items-center gap-[6px] bg-[#F0EDE8] border border-[#D4CEC5] px-[14px] py-2 text-[11px] font-semibold text-[#555555] hover:bg-canvas-divide transition-colors"
                   style={{ borderRadius: 2 }}>
                   <FileText size={14} />
@@ -1061,7 +1104,10 @@ function IndexDialog() {
                 <button
                   onClick={async () => {
                     try {
-                      await downloadMarkdownAsPdf(result.resumeContent, result.resumeFilename)
+                      await downloadMarkdownAsPdf(
+                        result.resumeContent,
+                        result.resumeFilename
+                      )
                     } catch (error) {
                       console.error("PDF export failed:", error)
                       alert("Failed to generate PDF. Please try again.")
@@ -1081,7 +1127,12 @@ function IndexDialog() {
               </span>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => downloadMarkdownFile(result.coverLetterFilename, result.coverLetterContent)}
+                  onClick={() =>
+                    downloadMarkdownFile(
+                      result.coverLetterFilename,
+                      result.coverLetterContent
+                    )
+                  }
                   className="flex items-center gap-[6px] bg-[#F0EDE8] border border-[#D4CEC5] px-[14px] py-2 text-[11px] font-semibold text-[#555555] hover:bg-canvas-divide transition-colors"
                   style={{ borderRadius: 2 }}>
                   <FileText size={14} />
@@ -1090,7 +1141,10 @@ function IndexDialog() {
                 <button
                   onClick={async () => {
                     try {
-                      await downloadMarkdownAsPdf(result.coverLetterContent, result.coverLetterFilename)
+                      await downloadMarkdownAsPdf(
+                        result.coverLetterContent,
+                        result.coverLetterFilename
+                      )
                     } catch (error) {
                       console.error("PDF export failed:", error)
                       alert("Failed to generate PDF. Please try again.")
@@ -1158,7 +1212,6 @@ function IndexDialog() {
         {/* Form Content */}
         <div className="flex-1 px-12 py-10 overflow-auto flex justify-center">
           <div className="w-full max-w-lg space-y-5">
-
             {/* Fields */}
             <div className="space-y-4">
               {/* Company */}
@@ -1259,7 +1312,10 @@ function IndexDialog() {
                 type="checkbox"
                 checked={saveFormData.isFavorite}
                 onChange={(e) =>
-                  setSaveFormData((f) => ({ ...f, isFavorite: e.target.checked }))
+                  setSaveFormData((f) => ({
+                    ...f,
+                    isFavorite: e.target.checked
+                  }))
                 }
                 className="border-canvas-input-border text-sidebar-accent focus:ring-sidebar-accent"
               />
@@ -1288,10 +1344,11 @@ function IndexDialog() {
                             : [...f.tags, tag]
                         }))
                       }
-                      className={`px-3 py-1 text-[11px] font-medium tracking-[0.05em] border transition-colors ${active
-                        ? "bg-ink text-white border-ink"
-                        : "border-canvas-input-border text-ink-secondary hover:text-ink hover:border-ink-secondary"
-                        }`}>
+                      className={`px-3 py-1 text-[11px] font-medium tracking-[0.05em] border transition-colors ${
+                        active
+                          ? "bg-ink text-white border-ink"
+                          : "border-canvas-input-border text-ink-secondary hover:text-ink hover:border-ink-secondary"
+                      }`}>
                       {tag}
                     </button>
                   )
@@ -1332,7 +1389,7 @@ function IndexDialog() {
                     if (val && !saveFormData.tags.includes(val)) {
                       setSaveFormData((f) => ({ ...f, tags: [...f.tags, val] }))
                     }
-                    ; (e.target as HTMLInputElement).value = ""
+                    ;(e.target as HTMLInputElement).value = ""
                   }
                 }}
               />
@@ -1378,10 +1435,13 @@ function IndexDialog() {
               perplexityConfig?.preparationPlanEnabled && (
                 <div className="border-t border-canvas-divide pt-5">
                   {editingApplication.preparationPlan &&
-                    editingApplication.preparationPlan.interviewType ===
+                  editingApplication.preparationPlan.interviewType ===
                     saveFormData.status ? (
                     <div className="flex items-center gap-3 p-3 bg-canvas border border-canvas-divide">
-                      <Lightbulb size={16} className="text-sidebar-accent shrink-0" />
+                      <Lightbulb
+                        size={16}
+                        className="text-sidebar-accent shrink-0"
+                      />
                       <span className="text-[13px] text-ink flex-1">
                         Preparation plan already generated
                       </span>
@@ -1446,9 +1506,7 @@ function IndexDialog() {
 
   // Applications list screen
   if (view === "applicationsList") {
-    const allTags = [
-      ...new Set(savedApplications.flatMap((a) => a.tags ?? []))
-    ]
+    const allTags = [...new Set(savedApplications.flatMap((a) => a.tags ?? []))]
     const filteredApplications = savedApplications.filter((app) => {
       if (showFavoritesOnly && !app.isFavorite) return false
       if (activeTagFilter && !(app.tags ?? []).includes(activeTagFilter))
@@ -1582,104 +1640,104 @@ function IndexDialog() {
 
               {(viewingApplication.resumeContent ||
                 viewingApplication.coverLetterContent) && (
-                  <div className="mt-5 pt-4 border-t border-canvas-divide space-y-3">
-                    <p className="text-[10px] font-semibold text-ink-secondary uppercase tracking-[0.15em] mb-2">
-                      Documents
-                    </p>
+                <div className="mt-5 pt-4 border-t border-canvas-divide space-y-3">
+                  <p className="text-[10px] font-semibold text-ink-secondary uppercase tracking-[0.15em] mb-2">
+                    Documents
+                  </p>
 
-                    {viewingApplication.resumeContent &&
-                      viewingApplication.resumeFilename && (
-                        <div>
-                          <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-[0.15em] mb-1.5">
-                            Resume
-                          </p>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() =>
-                                downloadMarkdownFile(
-                                  viewingApplication.resumeFilename,
-                                  viewingApplication.resumeContent
-                                )
-                              }
-                              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
+                  {viewingApplication.resumeContent &&
+                    viewingApplication.resumeFilename && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-[0.15em] mb-1.5">
+                          Resume
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() =>
+                              downloadMarkdownFile(
+                                viewingApplication.resumeFilename,
+                                viewingApplication.resumeContent
+                              )
+                            }
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
                                        bg-canvas border border-canvas-divide text-ink-secondary
                                        hover:bg-canvas-divide hover:text-ink
                                        active:scale-[0.97] transition-all text-xs font-medium">
-                              <FileText size={12} />
-                              <span>MD</span>
-                            </button>
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await downloadMarkdownAsPdf(
-                                    viewingApplication.resumeContent,
-                                    viewingApplication.resumeFilename
-                                  )
-                                } catch (error) {
-                                  console.error("PDF export failed:", error)
-                                  alert(
-                                    "Failed to generate PDF. Please try again."
-                                  )
-                                }
-                              }}
-                              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
+                            <FileText size={12} />
+                            <span>MD</span>
+                          </button>
+                          <button
+                            onClick={async () => {
+                              try {
+                                await downloadMarkdownAsPdf(
+                                  viewingApplication.resumeContent,
+                                  viewingApplication.resumeFilename
+                                )
+                              } catch (error) {
+                                console.error("PDF export failed:", error)
+                                alert(
+                                  "Failed to generate PDF. Please try again."
+                                )
+                              }
+                            }}
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
                                        bg-sidebar-accent text-white
                                        hover:opacity-90 active:scale-[0.97]
                                        transition-all text-xs font-semibold">
-                              <Download size={12} />
-                              <span>PDF</span>
-                            </button>
-                          </div>
+                            <Download size={12} />
+                            <span>PDF</span>
+                          </button>
                         </div>
-                      )}
+                      </div>
+                    )}
 
-                    {viewingApplication.coverLetterContent &&
-                      viewingApplication.coverLetterFilename && (
-                        <div>
-                          <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-[0.15em] mb-1.5">
-                            Cover Letter
-                          </p>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() =>
-                                downloadMarkdownFile(
-                                  viewingApplication.coverLetterFilename,
-                                  viewingApplication.coverLetterContent
-                                )
-                              }
-                              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
+                  {viewingApplication.coverLetterContent &&
+                    viewingApplication.coverLetterFilename && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-[0.15em] mb-1.5">
+                          Cover Letter
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() =>
+                              downloadMarkdownFile(
+                                viewingApplication.coverLetterFilename,
+                                viewingApplication.coverLetterContent
+                              )
+                            }
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
                                        bg-canvas border border-canvas-divide text-ink-secondary
                                        hover:bg-canvas-divide hover:text-ink
                                        active:scale-[0.97] transition-all text-xs font-medium">
-                              <FileText size={12} />
-                              <span>MD</span>
-                            </button>
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await downloadMarkdownAsPdf(
-                                    viewingApplication.coverLetterContent,
-                                    viewingApplication.coverLetterFilename
-                                  )
-                                } catch (error) {
-                                  console.error("PDF export failed:", error)
-                                  alert(
-                                    "Failed to generate PDF. Please try again."
-                                  )
-                                }
-                              }}
-                              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
+                            <FileText size={12} />
+                            <span>MD</span>
+                          </button>
+                          <button
+                            onClick={async () => {
+                              try {
+                                await downloadMarkdownAsPdf(
+                                  viewingApplication.coverLetterContent,
+                                  viewingApplication.coverLetterFilename
+                                )
+                              } catch (error) {
+                                console.error("PDF export failed:", error)
+                                alert(
+                                  "Failed to generate PDF. Please try again."
+                                )
+                              }
+                            }}
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2
                                        bg-sidebar-accent text-white
                                        hover:opacity-90 active:scale-[0.97]
                                        transition-all text-xs font-semibold">
-                              <Download size={12} />
-                              <span>PDF</span>
-                            </button>
-                          </div>
+                            <Download size={12} />
+                            <span>PDF</span>
+                          </button>
                         </div>
-                      )}
-                  </div>
-                )}
+                      </div>
+                    )}
+                </div>
+              )}
 
               {viewingApplication.preparationPlan && (
                 <div className="mt-5 pt-4 border-t border-canvas-divide">
@@ -1739,7 +1797,6 @@ function IndexDialog() {
 
         {/* Content Area */}
         <div className="flex-1 flex flex-col gap-6 px-12 py-10 overflow-auto">
-
           {/* Filter Row */}
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -1747,10 +1804,11 @@ function IndexDialog() {
                 setActiveTagFilter(null)
                 setShowFavoritesOnly(false)
               }}
-              className={`px-4 py-2 text-[11px] font-semibold tracking-[0.1em] transition-colors ${!activeTagFilter && !showFavoritesOnly
-                ? "bg-ink text-white"
-                : "text-sidebar-item hover:text-ink"
-                }`}>
+              className={`px-4 py-2 text-[11px] font-semibold tracking-[0.1em] transition-colors ${
+                !activeTagFilter && !showFavoritesOnly
+                  ? "bg-ink text-white"
+                  : "text-sidebar-item hover:text-ink"
+              }`}>
               ALL
             </button>
             <button
@@ -1758,11 +1816,12 @@ function IndexDialog() {
                 setShowFavoritesOnly((v) => !v)
                 setActiveTagFilter(null)
               }}
-              className={`px-4 py-2 text-[11px] font-medium tracking-[0.1em] transition-colors ${showFavoritesOnly
-                ? "bg-ink text-white"
-                : "text-sidebar-item hover:text-ink"
-                }`}>
-              ★  FAVOURITES
+              className={`px-4 py-2 text-[11px] font-medium tracking-[0.1em] transition-colors ${
+                showFavoritesOnly
+                  ? "bg-ink text-white"
+                  : "text-sidebar-item hover:text-ink"
+              }`}>
+              ★ FAVOURITES
             </button>
             {allTags.map((tag) => (
               <button
@@ -1771,10 +1830,11 @@ function IndexDialog() {
                   setActiveTagFilter(activeTagFilter === tag ? null : tag)
                   setShowFavoritesOnly(false)
                 }}
-                className={`px-4 py-2 text-[11px] font-medium tracking-[0.1em] transition-colors ${activeTagFilter === tag
-                  ? "bg-ink text-white"
-                  : "text-sidebar-item hover:text-ink"
-                  }`}>
+                className={`px-4 py-2 text-[11px] font-medium tracking-[0.1em] transition-colors ${
+                  activeTagFilter === tag
+                    ? "bg-ink text-white"
+                    : "text-sidebar-item hover:text-ink"
+                }`}>
                 {tag}
               </button>
             ))}
@@ -1840,7 +1900,9 @@ function IndexDialog() {
                   <div className="w-40 shrink-0">
                     <div className="flex items-center gap-1.5">
                       {app.isFavorite && (
-                        <span className="text-sidebar-accent text-xs leading-none">★</span>
+                        <span className="text-sidebar-accent text-xs leading-none">
+                          ★
+                        </span>
                       )}
                       <span className="text-[13px] font-semibold text-ink">
                         {app.company}
@@ -1866,14 +1928,15 @@ function IndexDialog() {
 
                   {/* Match % */}
                   <span
-                    className={`w-[88px] shrink-0 text-[12px] font-semibold ${app.matchPercentage == null
-                      ? "text-ink-muted"
-                      : app.matchPercentage >= 85
-                        ? "text-sidebar-accent"
-                        : app.matchPercentage >= 70
-                          ? "text-ink"
-                          : "text-ink-secondary"
-                      }`}>
+                    className={`w-[88px] shrink-0 text-[12px] font-semibold ${
+                      app.matchPercentage == null
+                        ? "text-ink-muted"
+                        : app.matchPercentage >= 85
+                          ? "text-sidebar-accent"
+                          : app.matchPercentage >= 70
+                            ? "text-ink"
+                            : "text-ink-secondary"
+                    }`}>
                     {app.matchPercentage != null
                       ? `${app.matchPercentage}%`
                       : "—"}
@@ -2031,9 +2094,13 @@ function IndexDialog() {
           </form>
 
           {status && (
-            <p className={`mt-3 text-sm ${status.includes("failed") || status.includes("error") || status.includes("Error")
-              ? "text-red-500"
-              : "text-sidebar-accent"
+            <p
+              className={`mt-3 text-sm ${
+                status.includes("failed") ||
+                status.includes("error") ||
+                status.includes("Error")
+                  ? "text-red-500"
+                  : "text-sidebar-accent"
               }`}>
               {status}
             </p>
