@@ -17,6 +17,7 @@ export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS]
 export const SYNC_KEYS = [
   "userProfile",
   "ollamaConfig",
+  "perplexityConfig",
   "customPrompts",
   "llmTuning",
   "savedApplications",
