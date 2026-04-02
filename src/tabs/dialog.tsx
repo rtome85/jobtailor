@@ -1953,11 +1953,6 @@ function IndexDialog() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setView("applicationsList")}
-            className="text-[11px] font-semibold tracking-[0.1em] text-sidebar-accent hover:text-ink transition-colors">
-            MY APPLICATIONS
-          </button>
-          <button
             onClick={() => window.close()}
             className="w-9 h-9 flex items-center justify-center bg-[#F0EDE8] text-sidebar-item hover:bg-canvas-divide transition-colors">
             <X size={18} />
